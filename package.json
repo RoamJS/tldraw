@@ -1,0 +1,21 @@
+{
+  "name": "extension-base",
+  "version": "1.0.0",
+  "description": "Stock RoamJS Roam Research Extension base — fork this repo to start new extensions.",
+  "main": "index.js",
+  "scripts": {
+    "postinstall": "patch-package",
+    "start": "samepage dev",
+    "prebuild:roam": "npm install",
+    "build:roam": "samepage build --dry",
+    "test": "samepage test"
+  },
+  "keywords": ["roam", "roam-research", "roamjs"],
+  "license": "MIT",
+  "dependencies": {
+    "roamjs-components": "^0.86.4"
+  },
+  "samepage": {
+    "extends": "node_modules/roamjs-components/package.json"
+  }
+}
