@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState, useRef } from "react";
 import { OnloadArgs } from "roamjs-components/types";
 import renderWithUnmount from "roamjs-components/util/renderWithUnmount";
 import getPageUidByPageTitle from "roamjs-components/queries/getPageUidByPageTitle";
+import getUids from "roamjs-components/dom/getUids";
 import {
   Box,
   Editor,
@@ -53,6 +54,7 @@ type InspectorTarget = {
 
 const INSPECTOR_DOM_RESULT_LIMIT = 50;
 const INSPECTOR_SEARCH_DEBOUNCE_MS = 250;
+const ROAM_URL_UID_REGEX = /(?:\/page\/|\/block\/)([\w\d_-]{9,10})/i;
 
 const TldrawCanvas = ({
   title,
@@ -75,6 +77,36 @@ const TldrawCanvas = ({
   const [isLoadingResults, setIsLoadingResults] = useState<boolean>(false);
   const [isInspectorMaximized, setIsInspectorMaximized] =
     useState<boolean>(false);
+
+  const getBlockUidFromBullet = (bulletEl: HTMLElement): string | undefined => {
+    try {
+      const uidFromTarget = getUids(bulletEl as HTMLDivElement).blockUid;
+      if (uidFromTarget) return uidFromTarget;
+    } catch {
+      // continue to DOM fallback
+    }
+    const blockMain =
+      bulletEl.closest(".rm-block-main") || bulletEl.closest(".rm-block__self");
+    if (!blockMain) return undefined;
+    const blockInput = blockMain.querySelector(".rm-block__input");
+    if (!blockInput) return undefined;
+    return getUids(blockInput as HTMLDivElement).blockUid;
+  };
+
+  const getUidFromDroppedText = ({ text }: { text: string }): string => {
+    const trimmed = text.trim();
+    const blockRefMatch = trimmed.match(/^\(\(([\w\d_-]{9,10})\)\)$/);
+    if (blockRefMatch?.[1]) return blockRefMatch[1];
+
+    const markdownLinkMatch = trimmed.match(
+      /^\[[^\]]*\]\((https?:\/\/[^\s)]+)\)$/i,
+    );
+    const urlCandidate = markdownLinkMatch?.[1] || trimmed;
+    const urlMatch = urlCandidate.match(ROAM_URL_UID_REGEX);
+    if (urlMatch?.[1]) return urlMatch[1];
+
+    return "";
+  };
 
   const shapeUtils = useMemo(
     () => [...defaultShapeUtils, ...createDefaultNodeShapeUtils()],
@@ -215,6 +247,20 @@ const TldrawCanvas = ({
     return () => window.clearTimeout(timeout);
   }, [inspectorTarget?.id]);
 
+  useEffect(() => {
+    const handleDragStart = (e: DragEvent): void => {
+      const target = e.target as HTMLElement | null;
+      if (!target) return;
+      const uid = getBlockUidFromBullet(target);
+      if (uid) {
+        e.dataTransfer?.setData("application/x-roam-uid", uid);
+        e.dataTransfer?.setData("text/x-roam-uid", uid);
+      }
+    };
+    document.addEventListener("dragstart", handleDragStart);
+    return () => document.removeEventListener("dragstart", handleDragStart);
+  }, []);
+
   if (!pageUid) return null;
 
   const cancelInspector = (): void => {
@@ -268,6 +314,81 @@ const TldrawCanvas = ({
     if (!selectedResult) return;
     applyInspectorResult(selectedResult);
   };
+
+  const handleDropPayload = ({
+    dataTransfer,
+    clientX,
+    clientY,
+  }: {
+    dataTransfer: DataTransfer;
+    clientX: number;
+    clientY: number;
+  }): void => {
+    const editor = appRef.current;
+    if (!editor) return;
+    const dropPoint = editor.screenToPage({ x: clientX, y: clientY });
+    const droppedText = dataTransfer.getData("text/plain") || "";
+    const appUid = dataTransfer.getData("application/x-roam-uid");
+    const textUid = dataTransfer.getData("text/x-roam-uid");
+    const parsedUid = getUidFromDroppedText({ text: droppedText });
+    const uid = appUid || textUid || parsedUid;
+    if (uid) {
+      const match = getNodeTypeFromRoamRefText(`((${uid}))`);
+      if (match) {
+        editor.createShape<RoamNodeShape>({
+          id: createShapeId(),
+          type: match.type,
+          x: dropPoint.x,
+          y: dropPoint.y,
+          props: {
+            uid: match.uid,
+            title: match.title,
+            w: 220,
+            h: 92,
+          },
+        });
+      }
+      return;
+    }
+
+    void editor.putExternalContent({
+      type: "text",
+      text: droppedText,
+      point: dropPoint,
+    });
+  };
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const onDragOverNative = (e: DragEvent): void => {
+      const target = e.target as Node | null;
+      if (!target || !container.contains(target)) return;
+      e.preventDefault();
+    };
+
+    const onDropNative = (e: DragEvent): void => {
+      const target = e.target as Node | null;
+      if (!target || !container.contains(target)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      (e as Event).stopImmediatePropagation?.();
+      if (!e.dataTransfer) return;
+      handleDropPayload({
+        dataTransfer: e.dataTransfer,
+        clientX: e.clientX,
+        clientY: e.clientY,
+      });
+    };
+
+    container.addEventListener("dragover", onDragOverNative, true);
+    container.addEventListener("drop", onDropNative, true);
+    return () => {
+      container.removeEventListener("dragover", onDragOverNative, true);
+      container.removeEventListener("drop", onDropNative, true);
+    };
+  }, []);
 
   return (
     <div
@@ -372,7 +493,8 @@ const TldrawCanvas = ({
 
           editor.registerExternalContentHandler("text", async (content) => {
             if (content.type !== "text") return;
-            const match = getNodeTypeFromRoamRefText(content.text.trim());
+            const trimmedText = content.text.trim();
+            const match = getNodeTypeFromRoamRefText(trimmedText);
             if (!match) {
               await defaultHandleExternalTextContent(editor, {
                 point: content.point,
