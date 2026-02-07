@@ -4,18 +4,28 @@
   "description": "Stock RoamJS Roam Research Extension base — fork this repo to start new extensions.",
   "main": "index.js",
   "scripts": {
-    "postinstall": "patch-package",
+    "dev": "tsx scripts/dev.ts",
     "start": "samepage dev",
-    "prebuild:roam": "npm install",
+    "prebuild:roam": "pnpm install",
     "build:roam": "samepage build --dry",
     "test": "samepage test"
   },
-  "keywords": ["roam", "roam-research", "roamjs"],
+  "keywords": [
+    "roam",
+    "roam-research",
+    "roamjs"
+  ],
   "license": "MIT",
+  "packageManager": "pnpm@9.15.0",
   "dependencies": {
-    "roamjs-components": "^0.86.4"
+    "roamjs-components": "0.86.4",
+    "tldraw": "3.15.5"
   },
   "samepage": {
     "extends": "node_modules/roamjs-components/package.json"
+  },
+  "devDependencies": {
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
   }
 }
