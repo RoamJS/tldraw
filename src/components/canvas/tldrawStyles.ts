@@ -1,5 +1,7 @@
 // tldrawStyles.ts because some of these styles need to be inlined
 export default /* css */ `
+
+
   /* Hide Roam Blocks only when a canvas is present under the root */
   .roam-article:has(.roamjs-tldraw-canvas-container) .rm-block-children  {
     display: none;
@@ -60,5 +62,18 @@ export default /* css */ `
 /* Roam's main container should be static when tldraw is maximized */
 .roam-main {
   position: relative;
+}
+
+/* Node inspector active row style */
+.roamjs-node-inspector .bp3-menu-item,
+.roamjs-node-inspector .bp3-menu-item:hover {
+  text-decoration: none;
+}
+
+.roamjs-node-inspector .bp3-menu-item.bp3-active,
+.roamjs-node-inspector .bp3-menu-item.bp3-active:hover {
+  background-color: #f3f4f6;
+  color: inherit;
+  text-decoration: none;
 }
 `;

@@ -1,39 +1,54 @@
-import React, { useMemo, useRef } from "react";
+import React, { useEffect, useMemo, useState, useRef } from "react";
 import { OnloadArgs } from "roamjs-components/types";
 import renderWithUnmount from "roamjs-components/util/renderWithUnmount";
 import getPageUidByPageTitle from "roamjs-components/queries/getPageUidByPageTitle";
 import {
   Box,
   Editor,
-  TLShape,
-  TLShapeId,
   TLPointerEventInfo,
   Tldraw,
+  createShapeId,
   defaultHandleExternalTextContent,
   defaultShapeTools,
   defaultShapeUtils,
   defaultTools,
 } from "tldraw";
 import openBlockInSidebar from "roamjs-components/writes/openBlockInSidebar";
+import {
+  Button,
+  FocusStyleManager,
+  InputGroup,
+  Menu,
+  MenuItem,
+} from "@blueprintjs/core";
 import "tldraw/tldraw.css";
 import { useRoamStore } from "./useRoamStore";
 import {
   createDefaultNodeShapeTools,
   createDefaultNodeShapeUtils,
+  DefaultNodeType,
   getNodeTypeFromRoamRefText,
+  RoamNodeShape,
+  searchBlocks,
+  searchPages,
+  SearchResult,
 } from "./DefaultNodeUtil";
 import {
   CANVAS_MAXIMIZE_HOTKEY_KEY,
+  customAssetUrls,
   createUiComponents,
   createUiOverrides,
 } from "./uiOverrides";
 import tldrawStyles from "./tldrawStyles";
 
-const createShapeId = (): string =>
-  `shape:${window.roamAlphaAPI.util.generateUID()}`;
-const toShapeId = (id: string): TLShapeId => id as TLShapeId;
-const toShapeType = (type: string): TLShape["type"] =>
-  type as unknown as TLShape["type"];
+type InspectorTarget = {
+  id: RoamNodeShape["id"];
+  type: DefaultNodeType;
+  uid: string;
+  title: string;
+  w: number;
+  h: number;
+};
 
 const TldrawCanvas = ({
   title,
@@ -45,6 +60,12 @@ const TldrawCanvas = ({
   const pageUid = getPageUidByPageTitle(title);
   const appRef = useRef<Editor | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const inspectorInputRef = useRef<HTMLInputElement | null>(null);
+  const [inspectorTarget, setInspectorTarget] =
+    useState<InspectorTarget | null>(null);
+  const [query, setQuery] = useState<string>("");
+  const [results, setResults] = useState<SearchResult[]>([]);
+  const [selectedUid, setSelectedUid] = useState<string>("");
 
   const shapeUtils = useMemo(
     () => [...defaultShapeUtils, ...createDefaultNodeShapeUtils()],
@@ -80,12 +101,12 @@ const TldrawCanvas = ({
     const wrapper = tldrawEl.closest(".roam-article, .rm-sidebar-outline");
     if (tldrawEl.classList.contains("relative")) {
       // Going to fullscreen
-      if (wrapper) wrapper.classList.add("dg-tldraw-maximized");
+      if (wrapper) wrapper.classList.add("rjs-tldraw-maximized");
       tldrawEl.classList.add("absolute", "inset-0");
       tldrawEl.classList.remove("relative");
     } else {
       // Going back to normal
-      if (wrapper) wrapper.classList.remove("dg-tldraw-maximized");
+      if (wrapper) wrapper.classList.remove("rjs-tldraw-maximized");
       tldrawEl.classList.add("relative");
       tldrawEl.classList.remove("absolute", "inset-0");
     }
@@ -100,7 +121,111 @@ const TldrawCanvas = ({
   );
   const uiComponents = useMemo(() => createUiComponents(), []);
 
+  useEffect(() => {
+    if (!inspectorTarget) {
+      setQuery("");
+      setResults([]);
+      setSelectedUid("");
+      return;
+    }
+    setQuery(inspectorTarget.title || "");
+    setSelectedUid("");
+  }, [inspectorTarget?.id]);
+
+  useEffect(() => {
+    if (!inspectorTarget) return;
+    if (!query.trim()) {
+      setResults([]);
+      return;
+    }
+    const timeout = window.setTimeout(() => {
+      const r =
+        inspectorTarget.type === "page-node"
+          ? searchPages({ query }).slice(0, 30)
+          : searchBlocks({ query }).slice(0, 30);
+      setResults(r);
+    }, 120);
+    return () => window.clearTimeout(timeout);
+  }, [inspectorTarget, query]);
+
+  useEffect(() => {
+    if (!results.length) {
+      setSelectedUid("");
+      return;
+    }
+    if (!selectedUid || !results.some((r) => r.uid === selectedUid)) {
+      setSelectedUid(results[0].uid);
+    }
+  }, [results, selectedUid]);
+
+  useEffect(() => {
+    if (!inspectorTarget) return;
+    FocusStyleManager.onlyShowFocusOnTabs();
+    return () => {
+      FocusStyleManager.alwaysShowFocus();
+    };
+  }, [inspectorTarget]);
+
+  useEffect(() => {
+    if (!inspectorTarget) return;
+    const timeout = window.setTimeout(() => {
+      inspectorInputRef.current?.focus();
+      inspectorInputRef.current?.select();
+    }, 0);
+    return () => window.clearTimeout(timeout);
+  }, [inspectorTarget?.id]);
+
   if (!pageUid) return null;
+
+  const cancelInspector = (): void => {
+    const editor = appRef.current;
+    if (!editor || !inspectorTarget) {
+      setInspectorTarget(null);
+      return;
+    }
+    if (!inspectorTarget.uid) {
+      editor.deleteShapes([inspectorTarget.id]);
+    }
+    editor.selectNone();
+    setInspectorTarget(null);
+  };
+
+  const selectedResult = results.find((r) => r.uid === selectedUid) || null;
+
+  const moveSelection = (delta: 1 | -1): void => {
+    if (!results.length) return;
+    const currentIndex = results.findIndex((r) => r.uid === selectedUid);
+    const nextIndex =
+      currentIndex < 0
+        ? delta === 1
+          ? 0
+          : results.length - 1
+        : (currentIndex + delta + results.length) % results.length;
+    setSelectedUid(results[nextIndex].uid);
+  };
+
+  const applyInspectorResult = (result: SearchResult): void => {
+    const editor = appRef.current;
+    if (!editor || !inspectorTarget) return;
+    editor.updateShapes([
+      {
+        id: inspectorTarget.id,
+        type: inspectorTarget.type,
+        props: {
+          uid: result.uid,
+          title: result.title,
+          w: inspectorTarget.w,
+          h: inspectorTarget.h,
+        },
+      },
+    ]);
+    setInspectorTarget(null);
+  };
+
+  const applyInspector = (): void => {
+    if (!selectedResult) return;
+    applyInspectorResult(selectedResult);
+  };
 
   return (
     <div
@@ -115,11 +240,51 @@ const TldrawCanvas = ({
         tools={tools}
         overrides={uiOverrides}
         components={uiComponents}
+        assetUrls={customAssetUrls}
         initialState="select"
         onMount={(editor) => {
           appRef.current = editor;
+          const refreshInspectorTarget = (): void => {
+            const selected = editor.getOnlySelectedShape() as
+              | {
+                  id: RoamNodeShape["id"];
+                  type: string;
+                  props?: {
+                    uid?: string;
+                    title?: string;
+                    w?: number;
+                    h?: number;
+                  };
+                }
+              | undefined;
+            if (!selected) {
+              setInspectorTarget(null);
+              return;
+            }
+            if (
+              selected.type !== "page-node" &&
+              selected.type !== "blck-node"
+            ) {
+              setInspectorTarget(null);
+              return;
+            }
+            if (selected.props?.uid) {
+              setInspectorTarget(null);
+              return;
+            }
+            setInspectorTarget({
+              id: selected.id,
+              type: selected.type as DefaultNodeType,
+              uid: selected.props?.uid || "",
+              title: selected.props?.title || "",
+              w: selected.props?.w || 260,
+              h: selected.props?.h || 120,
+            });
+          };
+
           editor.on("event", (event) => {
             const e = event as TLPointerEventInfo;
+            refreshInspectorTarget();
             const validModifier = e.shiftKey || e.ctrlKey;
             if (!(e.name === "pointer_up" && validModifier)) return;
 
@@ -165,9 +330,9 @@ const TldrawCanvas = ({
             }
             const point =
               content.point ?? editor.getViewportPageBounds().center;
-            editor.createShape({
-              id: toShapeId(createShapeId()),
-              type: toShapeType(match.type),
+            editor.createShape<RoamNodeShape>({
+              id: createShapeId(),
+              type: match.type,
               x: point.x,
               y: point.y,
               props: {
@@ -180,6 +345,84 @@ const TldrawCanvas = ({
           });
         }}
       />
+      {inspectorTarget && (
+        <div
+          className="pointer-events-none absolute inset-0 z-10"
+          style={{ backgroundColor: "rgba(15, 23, 42, 0.2)" }}
+        />
+      )}
+      {inspectorTarget && (
+        <div
+          className="roamjs-node-inspector absolute left-0 top-11 z-20 flex max-h-[calc(100%-2.75rem)] w-96 flex-col rounded-r-md border border-gray-200 bg-white shadow-sm"
+          onPointerDown={(e) => e.stopPropagation()}
+          style={{ pointerEvents: "all" }}
+        >
+          <div className="flex min-h-0 flex-1 flex-col p-3">
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <div className="text-sm font-semibold">
+                {inspectorTarget.type === "page-node"
+                  ? "Select Page"
+                  : "Select Block"}
+              </div>
+              <div className="flex items-center gap-2">
+                <Button small text="Cancel" onClick={cancelInspector} />
+                <Button
+                  small
+                  intent="primary"
+                  text="Apply"
+                  disabled={!selectedResult}
+                  onClick={applyInspector}
+                />
+              </div>
+            </div>
+            <InputGroup
+              autoFocus
+              inputRef={inspectorInputRef}
+              placeholder={
+                inspectorTarget.type === "page-node"
+                  ? "Search pages ..."
+                  : "Search blocks ..."
+              }
+              value={query}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                setQuery(e.target.value)
+              }
+              onKeyDown={(e) => {
+                if (e.key === "Escape") {
+                  e.preventDefault();
+                  cancelInspector();
+                } else if (e.key === "ArrowDown") {
+                  e.preventDefault();
+                  moveSelection(1);
+                } else if (e.key === "ArrowUp") {
+                  e.preventDefault();
+                  moveSelection(-1);
+                } else if (e.key === "Enter" && selectedResult) {
+                  e.preventDefault();
+                  applyInspector();
+                }
+              }}
+            />
+            <div className="mt-2 min-h-0 flex-1 overflow-auto">
+              <Menu>
+                {results.map((result) => (
+                  <MenuItem
+                    key={`${result.uid}-${result.title}`}
+                    text={result.title}
+                    active={selectedUid === result.uid}
+                    onClick={(e: React.MouseEvent<HTMLElement>) => {
+                      setSelectedUid(result.uid);
+                      if (e.detail === 2) {
+                        applyInspectorResult(result);
+                      }
+                    }}
+                  />
+                ))}
+              </Menu>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

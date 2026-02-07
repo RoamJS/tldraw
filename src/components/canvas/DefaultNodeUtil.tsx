@@ -1,52 +1,35 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 import {
   BaseBoxShapeUtil,
   HTMLContainer,
   StateNode,
   T,
-  TLShape,
-  TLShapeId,
+  TLBaseShape,
   TLStateNodeConstructor,
+  createShapeId,
   toDomPrecision,
-  useEditor,
 } from "tldraw";
-import { Button, Dialog, InputGroup, Menu, MenuItem } from "@blueprintjs/core";
 
 export type DefaultNodeType = "page-node" | "blck-node";
 
-export type RoamNodeShape = {
-  id: string;
-  type: DefaultNodeType;
-  x: number;
-  y: number;
-  rotation: number;
-  index: string;
-  parentId: string;
-  typeName: "shape";
-  isLocked: boolean;
-  opacity: number;
-  meta: Record<string, unknown>;
-  props: {
-    w: number;
-    h: number;
-    uid: string;
-    title: string;
-  };
-};
-
-type SearchResult = {
+type RoamNodeShapeProps = {
+  w: number;
+  h: number;
   uid: string;
   title: string;
 };
 
-const createShapeId = (): string =>
-  `shape:${window.roamAlphaAPI.util.generateUID()}`;
-const toShapeId = (id: string): TLShapeId => id as TLShapeId;
+export type RoamNodeShape = TLBaseShape<DefaultNodeType, RoamNodeShapeProps>;
+
+export type SearchResult = {
+  uid: string;
+  title: string;
+};
 
 const escapeRegex = (value: string): string =>
   value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
-const searchPages = ({ query }: { query: string }): SearchResult[] => {
+export const searchPages = ({ query }: { query: string }): SearchResult[] => {
   const pattern = escapeRegex(query.trim());
   if (!pattern) return [];
   const rows = window.roamAlphaAPI.q(
@@ -60,7 +43,7 @@ const searchPages = ({ query }: { query: string }): SearchResult[] => {
   return rows.map(([uid, title]) => ({ uid, title }));
 };
 
-const searchBlocks = ({ query }: { query: string }): SearchResult[] => {
+export const searchBlocks = ({ query }: { query: string }): SearchResult[] => {
   const pattern = escapeRegex(query.trim());
   if (!pattern) return [];
   const rows = window.roamAlphaAPI.q(
@@ -88,148 +71,7 @@ export const DEFAULT_NODE_TOOLS: {
   { id: "blck-node", label: "Block", kbd: "b" },
 ];
 
-const NodePickerDialog = ({ shape }: { shape: RoamNodeShape }): JSX.Element => {
-  const editor = useEditor();
-  const [isOpen, setIsOpen] = useState<boolean>(false);
-  const [query, setQuery] = useState<string>(shape.props.title || "");
-  const [results, setResults] = useState<SearchResult[]>([]);
-  const [selectedUid, setSelectedUid] = useState<string>("");
-
-  const shapeId = toShapeId(shape.id);
-  const isEditing = editor.getEditingShapeId() === shapeId;
-  const needsSelection = !shape.props.uid;
-
-  useEffect(() => {
-    if (isEditing || needsSelection) setIsOpen(true);
-  }, [isEditing, needsSelection]);
-
-  useEffect(() => {
-    if (!isOpen) return;
-    const onKeyDownCapture = (e: KeyboardEvent): void => {
-      if (e.key !== "Escape") return;
-      e.stopPropagation();
-      closeDialog();
-    };
-    document.addEventListener("keydown", onKeyDownCapture, true);
-    return () => {
-      document.removeEventListener("keydown", onKeyDownCapture, true);
-    };
-  }, [isOpen]);
-
-  useEffect(() => {
-    if (!isOpen) return;
-    if (!query.trim()) {
-      setResults([]);
-      return;
-    }
-    const timeout = window.setTimeout(() => {
-      const r =
-        shape.type === "page-node"
-          ? searchPages({ query }).slice(0, 20)
-          : searchBlocks({ query }).slice(0, 20);
-      setResults(r);
-    }, 120);
-    return () => window.clearTimeout(timeout);
-  }, [isOpen, query, shape.type]);
-
-  const closeDialog = (): void => {
-    setIsOpen(false);
-    setSelectedUid("");
-    editor.setEditingShape(null);
-    if (!shape.props.uid) {
-      editor.deleteShapes([shapeId]);
-    }
-    editor.setCurrentTool("select");
-  };
-
-  const applySelection = ({ uid, title }: SearchResult): void => {
-    editor.updateShapes([
-      {
-        id: shapeId,
-        type: shape.type as unknown as TLShape["type"],
-        props: {
-          ...shape.props,
-          uid,
-          title,
-        },
-      },
-    ]);
-    setIsOpen(false);
-    editor.setEditingShape(null);
-    editor.setCurrentTool("select");
-  };
-
-  const selectedResult = results.find((r) => r.uid === selectedUid) || null;
-  const handleEscape = (e: React.KeyboardEvent | KeyboardEvent): void => {
-    if (e.key !== "Escape") return;
-    e.stopPropagation();
-    if ("preventDefault" in e) e.preventDefault();
-    closeDialog();
-  };
-
-  return (
-    <Dialog
-      className="roamjs-canvas-dialog"
-      isOpen={isOpen}
-      title={shape.type === "page-node" ? "Select Page" : "Select Block"}
-      onClose={closeDialog}
-      canEscapeKeyClose
-      canOutsideClickClose
-      enforceFocus
-      autoFocus
-    >
-      <div
-        onPointerDown={(e) => e.stopPropagation()}
-        onKeyDownCapture={handleEscape}
-        style={{ pointerEvents: "all" }}
-      >
-        <div className="bp3-dialog-body">
-          <InputGroup
-            autoFocus
-            placeholder={
-              shape.type === "page-node" ? "Search pages..." : "Search blocks..."
-            }
-            value={query}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-              setQuery(e.target.value)
-            }
-            onKeyDown={handleEscape}
-          />
-          <div className="mt-2 max-h-80 overflow-auto">
-            <Menu>
-              {results.map((result) => (
-                <MenuItem
-                  key={`${result.uid}-${result.title}`}
-                  text={result.title}
-                  active={selectedUid === result.uid}
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    setSelectedUid(result.uid);
-                  }}
-                  onClick={() => setSelectedUid(result.uid)}
-                />
-              ))}
-            </Menu>
-          </div>
-        </div>
-        <div className="bp3-dialog-footer">
-          <div className="bp3-dialog-footer-actions">
-            <Button text="Cancel" onClick={closeDialog} />
-            <Button
-              intent="primary"
-              text="OK"
-              disabled={!selectedResult}
-              onClick={() => selectedResult && applySelection(selectedResult)}
-            />
-          </div>
-        </div>
-      </div>
-    </Dialog>
-  );
-};
-
-class BaseRoamNodeShapeUtil extends BaseBoxShapeUtil<any> {
+class BaseRoamNodeShapeUtil extends BaseBoxShapeUtil<RoamNodeShape> {
   static override props = {
     w: T.number,
     h: T.number,
@@ -237,11 +79,8 @@ class BaseRoamNodeShapeUtil extends BaseBoxShapeUtil<any> {
     title: T.string,
   };
 
-  override canEdit = () => true;
+  override canEdit = () => false;
   override canResize = () => true;
-  override onDoubleClick(shape: RoamNodeShape): void {
-    this.editor.setEditingShape(toShapeId(shape.id));
-  }
 
   override getDefaultProps(): RoamNodeShape["props"] {
     return {
@@ -253,7 +92,7 @@ class BaseRoamNodeShapeUtil extends BaseBoxShapeUtil<any> {
   }
 
   override indicator(shape: RoamNodeShape): JSX.Element {
-    const { bounds } = this.editor.getShapeGeometry(toShapeId(shape.id));
+    const { bounds } = this.editor.getShapeGeometry(shape);
     return (
       <rect
         width={toDomPrecision(bounds.width)}
@@ -265,20 +104,17 @@ class BaseRoamNodeShapeUtil extends BaseBoxShapeUtil<any> {
   override component(shape: RoamNodeShape): JSX.Element {
     const style = TYPE_STYLES[shape.type];
     return (
-      <>
-        <NodePickerDialog shape={shape} />
-        <HTMLContainer
-          className="roamjs-tldraw-node flex h-full w-full items-center justify-center overflow-hidden rounded-2xl px-4 text-center text-sm font-medium"
-          style={{
-            backgroundColor: style.bg,
-            color: style.color,
-          }}
-        >
-          <div className="line-clamp-3 w-full overflow-hidden text-ellipsis">
-            {shape.props.title || (shape.type === "page-node" ? "Page" : "Block")}
-          </div>
-        </HTMLContainer>
-      </>
+      <HTMLContainer
+        className="roamjs-tldraw-node flex h-full w-full items-center justify-center overflow-hidden rounded-2xl px-4 text-center text-sm font-medium"
+        style={{
+          backgroundColor: style.bg,
+          color: style.color,
+        }}
+      >
+        <div className="line-clamp-3 w-full overflow-hidden text-ellipsis">
+          {shape.props.title || (shape.type === "page-node" ? "Page" : "Block")}
+        </div>
+      </HTMLContainer>
     );
   }
 }
@@ -298,9 +134,9 @@ export const createDefaultNodeShapeTools = (): TLStateNodeConstructor[] =>
         override onPointerDown = (): void => {
           const { currentPagePoint } = this.editor.inputs;
           const shapeId = createShapeId();
-          this.editor.createShape({
-            id: toShapeId(shapeId),
-            type: this.shapeType as unknown as TLShape["type"],
+          this.editor.createShape<RoamNodeShape>({
+            id: shapeId,
+            type: this.shapeType,
             x: currentPagePoint.x,
             y: currentPagePoint.y,
             props: {
@@ -310,7 +146,7 @@ export const createDefaultNodeShapeTools = (): TLStateNodeConstructor[] =>
               h: 120,
             },
           });
-          this.editor.setEditingShape(toShapeId(shapeId));
+          this.editor.select(shapeId);
           this.editor.setCurrentTool("select");
         };
       },

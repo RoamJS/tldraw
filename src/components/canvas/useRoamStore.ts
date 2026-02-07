@@ -10,6 +10,33 @@ type RoamTldrawState = {
   tldraw: Parameters<typeof loadSnapshot>[1];
 };
 
+const sanitizeNodePropsInSnapshot = (
+  snapshot: Parameters<typeof loadSnapshot>[1],
+): Parameters<typeof loadSnapshot>[1] => {
+  const cloned = JSON.parse(JSON.stringify(snapshot)) as Record<string, unknown>;
+
+  const visit = (value: unknown): void => {
+    if (!value || typeof value !== "object") return;
+    const record = value as Record<string, unknown>;
+    const isTargetNode =
+      record.typeName === "shape" &&
+      (record.type === "page-node" || record.type === "blck-node");
+    if (isTargetNode && record.props && typeof record.props === "object") {
+      const props = record.props as Record<string, unknown>;
+      record.props = {
+        w: typeof props.w === "number" ? props.w : 260,
+        h: typeof props.h === "number" ? props.h : 120,
+        uid: typeof props.uid === "string" ? props.uid : "",
+        title: typeof props.title === "string" ? props.title : "",
+      };
+    }
+    Object.values(record).forEach(visit);
+  };
+
+  visit(cloned);
+  return cloned as Parameters<typeof loadSnapshot>[1];
+};
+
 const parseRoamTldrawState = (
   value: JsonValue | undefined,
 ): RoamTldrawState | undefined => {
@@ -74,7 +101,11 @@ export const useRoamStore = ({
 
     const persisted = getPersistedSnapshot(pageUid);
     if (persisted?.tldraw) {
-      loadSnapshot(tlStore, persisted.tldraw);
+      try {
+        loadSnapshot(tlStore, persisted.tldraw);
+      } catch {
+        loadSnapshot(tlStore, sanitizeNodePropsInSnapshot(persisted.tldraw));
+      }
     }
     return tlStore;
   }, [customShapeUtils, pageUid]);
@@ -124,7 +155,11 @@ export const useRoamStore = ({
         window.clearTimeout(deserializeTimeout.current);
         deserializeTimeout.current = window.setTimeout(() => {
           store.mergeRemoteChanges(() => {
-            loadSnapshot(store, state.tldraw);
+            try {
+              loadSnapshot(store, state.tldraw);
+            } catch {
+              loadSnapshot(store, sanitizeNodePropsInSnapshot(state.tldraw));
+            }
           });
         }, THROTTLE_MS);
       },
