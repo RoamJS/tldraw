@@ -1,4 +1,6 @@
 import React from "react";
+import { Button } from "@blueprintjs/core";
+import openBlockInSidebar from "roamjs-components/writes/openBlockInSidebar";
 import {
   BaseBoxShapeUtil,
   HTMLContainer,
@@ -146,16 +148,79 @@ class BaseRoamNodeShapeUtil extends BaseBoxShapeUtil<RoamNodeShape> {
 
   override component(shape: RoamNodeShape): JSX.Element {
     const style = TYPE_STYLES[shape.type];
+    const isConfigured = Boolean(shape.props.uid);
+    const emptyLabel =
+      shape.type === "page-node" ? "Click to set page" : "Click to set block";
+    const openInMainWindow = (): void => {
+      if (!shape.props.uid) return;
+      const isPage = Boolean(
+        window.roamAlphaAPI.pull("[:node/title]", [":block/uid", shape.props.uid])?.[
+          ":node/title"
+        ],
+      );
+      if (isPage) {
+        void window.roamAlphaAPI.ui.mainWindow.openPage({
+          page: { uid: shape.props.uid },
+        });
+        return;
+      }
+      void window.roamAlphaAPI.ui.mainWindow.openBlock({
+        block: { uid: shape.props.uid },
+      });
+    };
     return (
       <HTMLContainer
-        className="roamjs-tldraw-node flex h-full w-full items-center justify-center overflow-hidden rounded-2xl px-4 text-center text-sm font-medium"
+        className="roamjs-tldraw-node pointer-events-auto group flex h-full w-full overflow-hidden rounded-2xl"
         style={{
           backgroundColor: style.bg,
           color: style.color,
         }}
       >
-        <div className="line-clamp-3 w-full overflow-hidden text-ellipsis">
-          {shape.props.title || (shape.type === "page-node" ? "Page" : "Block")}
+        <div
+          className="relative flex h-full w-full items-center justify-center px-4 text-center text-sm font-medium"
+          style={{ pointerEvents: "all" }}
+        >
+          {isConfigured && (
+            <div className="pointer-events-auto absolute left-1 top-1 z-50 flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+              <Button
+                minimal
+                small
+                icon="document-open"
+                onClick={(e: React.MouseEvent<HTMLElement>) => {
+                  e.stopPropagation();
+                  openInMainWindow();
+                }}
+                onPointerDown={(e: React.PointerEvent<HTMLElement>) =>
+                  e.stopPropagation()
+                }
+                onPointerUp={(e: React.PointerEvent<HTMLElement>) =>
+                  e.stopPropagation()
+                }
+                style={{ color: style.color, opacity: 0.85 }}
+                title="Open"
+              />
+              <Button
+                minimal
+                small
+                icon="panel-stats"
+                onClick={(e: React.MouseEvent<HTMLElement>) => {
+                  e.stopPropagation();
+                  void openBlockInSidebar(shape.props.uid);
+                }}
+                onPointerDown={(e: React.PointerEvent<HTMLElement>) =>
+                  e.stopPropagation()
+                }
+                onPointerUp={(e: React.PointerEvent<HTMLElement>) =>
+                  e.stopPropagation()
+                }
+                style={{ color: style.color, opacity: 0.85 }}
+                title="Open in sidebar"
+              />
+            </div>
+          )}
+          <div className="line-clamp-3 w-full overflow-hidden text-ellipsis">
+            {shape.props.title || emptyLabel}
+          </div>
         </div>
       </HTMLContainer>
     );

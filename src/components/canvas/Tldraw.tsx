@@ -418,42 +418,46 @@ const TldrawCanvas = ({
           }}
         >
           <div
-            className="flex max-h-10 flex-shrink-0 items-center rounded-t-lg bg-white px-3"
+            className="flex max-h-10 flex-shrink-0 items-center rounded-t-lg bg-white pl-3 pr-1"
             style={{ minHeight: "35px" }}
           >
-            <div className="flex min-w-0 items-center gap-1">
-              <div className="m-0 text-left text-sm font-semibold leading-tight">
-                {inspectorTarget.type === "page-node"
-                  ? "Select Page"
-                  : "Select Block"}
+            <div className="flex w-full items-center">
+              <div className="flex min-w-0 items-center gap-1">
+                <div className="m-0 text-left text-sm font-semibold leading-tight">
+                  {inspectorTarget.type === "page-node"
+                    ? "Select Page"
+                    : "Select Block"}
+                </div>
+                <Button
+                  minimal
+                  small
+                  icon={isInspectorMaximized ? "minimize" : "maximize"}
+                  onClick={() => setIsInspectorMaximized((v) => !v)}
+                  title={
+                    isInspectorMaximized
+                      ? "Restore panel size"
+                      : "Maximize panel"
+                  }
+                />
               </div>
-              <Button
-                minimal
-                small
-                icon={isInspectorMaximized ? "minimize" : "maximize"}
-                onClick={() => setIsInspectorMaximized((v) => !v)}
-                title={
-                  isInspectorMaximized ? "Restore panel size" : "Maximize panel"
-                }
-              />
-            </div>
-            <div className="ml-auto flex flex-shrink-0 items-center gap-1">
-              <Button
-                minimal
-                small
-                icon="cross"
-                onClick={cancelInspector}
-                title="Cancel"
-              />
-              <Button
-                minimal
-                small
-                intent="primary"
-                icon="tick"
-                disabled={!selectedResult}
-                onClick={applyInspector}
-                title="Apply"
-              />
+              <div className="ml-auto flex flex-shrink-0 items-center justify-end gap-1">
+                <Button
+                  minimal
+                  small
+                  icon="cross"
+                  onClick={cancelInspector}
+                  title="Cancel"
+                />
+                <Button
+                  minimal
+                  small
+                  intent="primary"
+                  icon="tick"
+                  disabled={!selectedResult}
+                  onClick={applyInspector}
+                  title="Apply"
+                />
+              </div>
             </div>
           </div>
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden p-3">
