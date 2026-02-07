@@ -52,6 +52,7 @@ type InspectorTarget = {
 };
 
 const INSPECTOR_DOM_RESULT_LIMIT = 50;
+const INSPECTOR_SEARCH_DEBOUNCE_MS = 250;
 
 const TldrawCanvas = ({
   title,
@@ -147,12 +148,12 @@ const TldrawCanvas = ({
           : searchBlocks({ query });
       setResults(r);
       setIsLoadingResults(false);
-    }, 120);
+    }, INSPECTOR_SEARCH_DEBOUNCE_MS);
     return () => {
       window.clearTimeout(timeout);
       setIsLoadingResults(false);
     };
-  }, [inspectorTarget, query]);
+  }, [inspectorTarget?.id, inspectorTarget?.type, query]);
 
   const visibleResults = useMemo(
     () => results.slice(0, INSPECTOR_DOM_RESULT_LIMIT),
@@ -269,28 +270,37 @@ const TldrawCanvas = ({
                   };
                 }
               | undefined;
-            if (!selected) {
-              setInspectorTarget(null);
-              return;
-            }
-            if (
-              selected.type !== "page-node" &&
-              selected.type !== "blck-node"
-            ) {
-              setInspectorTarget(null);
-              return;
-            }
-            if (selected.props?.uid) {
-              setInspectorTarget(null);
-              return;
-            }
-            setInspectorTarget({
-              id: selected.id,
-              type: selected.type as DefaultNodeType,
-              uid: selected.props?.uid || "",
-              title: selected.props?.title || "",
-              w: selected.props?.w || 260,
-              h: selected.props?.h || 120,
+            setInspectorTarget((prev) => {
+              if (
+                !selected ||
+                (selected.type !== "page-node" && selected.type !== "blck-node") ||
+                selected.props?.uid
+              ) {
+                return prev ? null : prev;
+              }
+
+              const nextTarget: InspectorTarget = {
+                id: selected.id,
+                type: selected.type as DefaultNodeType,
+                uid: selected.props?.uid || "",
+                title: selected.props?.title || "",
+                w: selected.props?.w || 260,
+                h: selected.props?.h || 120,
+              };
+
+              if (
+                prev &&
+                prev.id === nextTarget.id &&
+                prev.type === nextTarget.type &&
+                prev.uid === nextTarget.uid &&
+                prev.title === nextTarget.title &&
+                prev.w === nextTarget.w &&
+                prev.h === nextTarget.h
+              ) {
+                return prev;
+              }
+
+              return nextTarget;
             });
           };
 
