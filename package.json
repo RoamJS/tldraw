@@ -25,6 +25,7 @@
     "extends": "node_modules/roamjs-components/package.json"
   },
   "devDependencies": {
+    "tailwindcss": "^3.4.0",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3"
   }
