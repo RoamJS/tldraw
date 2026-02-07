@@ -65,14 +65,17 @@ export default /* css */ `
 }
 
 /* Node inspector active row style */
-.roamjs-node-inspector .bp3-menu-item,
+.roamjs-node-inspector .bp3-menu-item {
+  text-decoration: none;
+}
 .roamjs-node-inspector .bp3-menu-item:hover {
   text-decoration: none;
+  background-color: #dadddf;
 }
 
 .roamjs-node-inspector .bp3-menu-item.bp3-active,
 .roamjs-node-inspector .bp3-menu-item.bp3-active:hover {
-  background-color: #f3f4f6;
+  background-color: #dadddf;
   color: inherit;
   text-decoration: none;
 }

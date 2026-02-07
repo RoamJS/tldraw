@@ -73,6 +73,8 @@ const TldrawCanvas = ({
   const [results, setResults] = useState<SearchResult[]>([]);
   const [selectedUid, setSelectedUid] = useState<string>("");
   const [isLoadingResults, setIsLoadingResults] = useState<boolean>(false);
+  const [isInspectorMaximized, setIsInspectorMaximized] =
+    useState<boolean>(false);
 
   const shapeUtils = useMemo(
     () => [...defaultShapeUtils, ...createDefaultNodeShapeUtils()],
@@ -134,6 +136,7 @@ const TldrawCanvas = ({
       setResults([]);
       setSelectedUid("");
       setIsLoadingResults(false);
+      setIsInspectorMaximized(false);
       lastSearchTargetIdRef.current = null;
       return;
     }
@@ -160,20 +163,14 @@ const TldrawCanvas = ({
           : searchBlocks({ query });
       void promise
         .then((r) => {
-          if (
-            cancelled ||
-            requestId !== searchRequestIdRef.current
-          ) {
+          if (cancelled || requestId !== searchRequestIdRef.current) {
             return;
           }
           setResults(r);
           setIsLoadingResults(false);
         })
         .catch(() => {
-          if (
-            cancelled ||
-            requestId !== searchRequestIdRef.current
-          ) {
+          if (cancelled || requestId !== searchRequestIdRef.current) {
             return;
           }
           setResults([]);
@@ -244,7 +241,8 @@ const TldrawCanvas = ({
         ? delta === 1
           ? 0
           : visibleResults.length - 1
-        : (currentIndex + delta + visibleResults.length) % visibleResults.length;
+        : (currentIndex + delta + visibleResults.length) %
+          visibleResults.length;
     setSelectedUid(visibleResults[nextIndex].uid);
   };
 
@@ -304,7 +302,8 @@ const TldrawCanvas = ({
             setInspectorTarget((prev) => {
               if (
                 !selected ||
-                (selected.type !== "page-node" && selected.type !== "blck-node") ||
+                (selected.type !== "page-node" &&
+                  selected.type !== "blck-node") ||
                 selected.props?.uid
               ) {
                 return prev ? null : prev;
@@ -406,9 +405,12 @@ const TldrawCanvas = ({
       )}
       {inspectorTarget && (
         <div
-          className="roamjs-node-inspector pointer-events-auto absolute bottom-10 left-1 z-20 flex w-80 flex-col rounded-lg bg-white"
+          className={`bottom-10 left-1 roamjs-node-inspector pointer-events-auto absolute flex flex-col rounded-lg bg-white ${
+            isInspectorMaximized ? "right-1" : "w-80"
+          }`}
           onPointerDown={(e) => e.stopPropagation()}
           style={{
+            zIndex: 300,
             top: "3.25rem",
             height: "calc(100% - 50px)",
             boxShadow:
@@ -419,24 +421,42 @@ const TldrawCanvas = ({
             className="flex max-h-10 flex-shrink-0 items-center rounded-t-lg bg-white px-3"
             style={{ minHeight: "35px" }}
           >
-            <h2 className="m-0 flex-1 pb-1 text-left text-sm font-semibold leading-tight">
-              {inspectorTarget.type === "page-node" ? "Select Page" : "Select Block"}
-            </h2>
-            <div className="flex flex-shrink-0 items-center gap-1">
-              <Button small text="Cancel" onClick={cancelInspector} />
+            <div className="flex min-w-0 items-center gap-1">
+              <div className="m-0 text-left text-sm font-semibold leading-tight">
+                {inspectorTarget.type === "page-node"
+                  ? "Select Page"
+                  : "Select Block"}
+              </div>
               <Button
+                minimal
+                small
+                icon={isInspectorMaximized ? "minimize" : "maximize"}
+                onClick={() => setIsInspectorMaximized((v) => !v)}
+                title={
+                  isInspectorMaximized ? "Restore panel size" : "Maximize panel"
+                }
+              />
+            </div>
+            <div className="ml-auto flex flex-shrink-0 items-center gap-1">
+              <Button
+                minimal
+                small
+                icon="cross"
+                onClick={cancelInspector}
+                title="Cancel"
+              />
+              <Button
+                minimal
                 small
                 intent="primary"
-                text="Apply"
+                icon="tick"
                 disabled={!selectedResult}
                 onClick={applyInspector}
+                title="Apply"
               />
             </div>
           </div>
-          <div
-            className="flex min-h-0 flex-1 flex-col overflow-hidden p-3"
-            style={{ borderTop: "1px solid hsl(0, 0%, 91%)" }}
-          >
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden p-3">
             <InputGroup
               autoFocus
               inputRef={inspectorInputRef}
