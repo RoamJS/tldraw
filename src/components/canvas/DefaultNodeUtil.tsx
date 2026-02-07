@@ -81,6 +81,7 @@ const NodePickerDialog = ({ shape }: { shape: RoamNodeShape }): JSX.Element => {
   const [isOpen, setIsOpen] = useState<boolean>(false);
   const [query, setQuery] = useState<string>(shape.props.title || "");
   const [results, setResults] = useState<SearchResult[]>([]);
+  const [selectedUid, setSelectedUid] = useState<string>("");
 
   const isEditing = editor.getEditingShapeId() === (shape.id as any);
   const needsSelection = !shape.props.uid;
@@ -88,6 +89,19 @@ const NodePickerDialog = ({ shape }: { shape: RoamNodeShape }): JSX.Element => {
   useEffect(() => {
     if (isEditing || needsSelection) setIsOpen(true);
   }, [isEditing, needsSelection]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKeyDownCapture = (e: KeyboardEvent): void => {
+      if (e.key !== "Escape") return;
+      e.stopPropagation();
+      closeDialog();
+    };
+    document.addEventListener("keydown", onKeyDownCapture, true);
+    return () => {
+      document.removeEventListener("keydown", onKeyDownCapture, true);
+    };
+  }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -107,6 +121,7 @@ const NodePickerDialog = ({ shape }: { shape: RoamNodeShape }): JSX.Element => {
 
   const closeDialog = (): void => {
     setIsOpen(false);
+    setSelectedUid("");
     editor.setEditingShape(null);
     if (!shape.props.uid) {
       editor.deleteShapes([shape.id as any]);
@@ -131,6 +146,14 @@ const NodePickerDialog = ({ shape }: { shape: RoamNodeShape }): JSX.Element => {
     editor.setCurrentTool("select");
   };
 
+  const selectedResult = results.find((r) => r.uid === selectedUid) || null;
+  const handleEscape = (e: React.KeyboardEvent | KeyboardEvent): void => {
+    if (e.key !== "Escape") return;
+    e.stopPropagation();
+    if ("preventDefault" in e) e.preventDefault();
+    closeDialog();
+  };
+
   return (
     <Dialog
       className="roamjs-canvas-dialog"
@@ -142,32 +165,51 @@ const NodePickerDialog = ({ shape }: { shape: RoamNodeShape }): JSX.Element => {
       enforceFocus
       autoFocus
     >
-      <div className="bp3-dialog-body">
-        <InputGroup
-          autoFocus
-          placeholder={
-            shape.type === "page-node" ? "Search pages..." : "Search blocks..."
-          }
-          value={query}
-          onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-            setQuery(e.target.value)
-          }
-        />
-        <div className="mt-2 max-h-80 overflow-auto">
-          <Menu>
-            {results.map((result) => (
-              <MenuItem
-                key={`${result.uid}-${result.title}`}
-                text={result.title}
-                onClick={() => applySelection(result)}
-              />
-            ))}
-          </Menu>
+      <div
+        onPointerDown={(e) => e.stopPropagation()}
+        onKeyDownCapture={handleEscape}
+        style={{ pointerEvents: "all" }}
+      >
+        <div className="bp3-dialog-body">
+          <InputGroup
+            autoFocus
+            placeholder={
+              shape.type === "page-node" ? "Search pages..." : "Search blocks..."
+            }
+            value={query}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+              setQuery(e.target.value)
+            }
+            onKeyDown={handleEscape}
+          />
+          <div className="mt-2 max-h-80 overflow-auto">
+            <Menu>
+              {results.map((result) => (
+                <MenuItem
+                  key={`${result.uid}-${result.title}`}
+                  text={result.title}
+                  active={selectedUid === result.uid}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setSelectedUid(result.uid);
+                  }}
+                  onClick={() => setSelectedUid(result.uid)}
+                />
+              ))}
+            </Menu>
+          </div>
         </div>
-      </div>
-      <div className="bp3-dialog-footer">
-        <div className="bp3-dialog-footer-actions">
-          <Button text="Cancel" onClick={closeDialog} />
+        <div className="bp3-dialog-footer">
+          <div className="bp3-dialog-footer-actions">
+            <Button text="Cancel" onClick={closeDialog} />
+            <Button
+              intent="primary"
+              text="OK"
+              disabled={!selectedResult}
+              onClick={() => selectedResult && applySelection(selectedResult)}
+            />
+          </div>
         </div>
       </div>
     </Dialog>
@@ -184,6 +226,9 @@ class BaseRoamNodeShapeUtil extends BaseBoxShapeUtil<any> {
 
   override canEdit = () => true;
   override canResize = () => true;
+  override onDoubleClick(shape: RoamNodeShape): void {
+    this.editor.setEditingShape(shape.id as any);
+  }
 
   override getDefaultProps(): RoamNodeShape["props"] {
     return {

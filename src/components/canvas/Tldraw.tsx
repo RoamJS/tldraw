@@ -5,12 +5,14 @@ import getPageUidByPageTitle from "roamjs-components/queries/getPageUidByPageTit
 import {
   Box,
   Editor,
+  TLPointerEventInfo,
   Tldraw,
   defaultHandleExternalTextContent,
   defaultShapeTools,
   defaultShapeUtils,
   defaultTools,
 } from "tldraw";
+import openBlockInSidebar from "roamjs-components/writes/openBlockInSidebar";
 import "tldraw/tldraw.css";
 import { useRoamStore } from "./useRoamStore";
 import {
@@ -44,7 +46,11 @@ const TldrawCanvas = ({
     [],
   );
   const tools = useMemo(
-    () => [...defaultTools, ...defaultShapeTools, ...createDefaultNodeShapeTools()],
+    () => [
+      ...defaultTools,
+      ...defaultShapeTools,
+      ...createDefaultNodeShapeTools(),
+    ],
     [],
   );
 
@@ -63,15 +69,18 @@ const TldrawCanvas = ({
   };
 
   const toggleMaximized = () => {
+    // Direct DOM manipulation to avoid React re-renders
     if (!containerRef.current) return;
     const tldrawEl = containerRef.current;
     const wrapper = tldrawEl.closest(".roam-article, .rm-sidebar-outline");
     if (tldrawEl.classList.contains("relative")) {
-      wrapper?.classList.add("rjs-tldraw-maximized");
-      tldrawEl.classList.remove("relative");
+      // Going to fullscreen
+      if (wrapper) wrapper.classList.add("rjs-tldraw-maximized");
       tldrawEl.classList.add("absolute", "inset-0");
+      tldrawEl.classList.remove("relative");
     } else {
-      wrapper?.classList.remove("rjs-tldraw-maximized");
+      // Going back to normal
+      if (wrapper) wrapper.classList.remove("rjs-tldraw-maximized");
       tldrawEl.classList.add("relative");
       tldrawEl.classList.remove("absolute", "inset-0");
     }
@@ -104,6 +113,41 @@ const TldrawCanvas = ({
         initialState="select"
         onMount={(editor) => {
           appRef.current = editor;
+          editor.on("event", (event) => {
+            const e = event as TLPointerEventInfo;
+            const validModifier = e.shiftKey || e.ctrlKey;
+            if (!(e.name === "pointer_up" && validModifier)) return;
+
+            const shape = editor.getShapeAtPoint(
+              editor.inputs.currentPagePoint,
+            ) as { props?: { uid?: string } } | undefined;
+            const shapeUid = shape?.props?.uid;
+            if (!shapeUid) return;
+
+            if (e.shiftKey) {
+              if (editor.getSelectedShapes().length > 1) return;
+              void openBlockInSidebar(shapeUid);
+              editor.selectNone();
+              return;
+            }
+
+            if (e.ctrlKey) {
+              const isPage = !!window.roamAlphaAPI.pull("[:node/title]", [
+                ":block/uid",
+                shapeUid,
+              ])?.[":node/title"];
+              if (isPage) {
+                void window.roamAlphaAPI.ui.mainWindow.openPage({
+                  page: { uid: shapeUid },
+                });
+              } else {
+                void window.roamAlphaAPI.ui.mainWindow.openBlock({
+                  block: { uid: shapeUid },
+                });
+              }
+            }
+          });
+
           editor.registerExternalContentHandler("text", async (content) => {
             if (content.type !== "text") return;
             const match = getNodeTypeFromRoamRefText(content.text.trim());
@@ -114,7 +158,8 @@ const TldrawCanvas = ({
               });
               return;
             }
-            const point = content.point ?? editor.getViewportPageBounds().center;
+            const point =
+              content.point ?? editor.getViewportPageBounds().center;
             editor.createShape({
               id: createShapeId(),
               type: match.type as any,
@@ -157,7 +202,8 @@ const renderTldrawCanvasHelper = ({
   if (!childFromRoot?.parentElement) return () => {};
 
   const parentEl = childFromRoot.parentElement;
-  if (parentEl.querySelector(".roamjs-tldraw-canvas-container")) return () => {};
+  if (parentEl.querySelector(".roamjs-tldraw-canvas-container"))
+    return () => {};
 
   const canvasWrapperEl = document.createElement("div");
   parentEl.appendChild(canvasWrapperEl);
