@@ -4,6 +4,8 @@ import {
   HTMLContainer,
   StateNode,
   T,
+  TLShape,
+  TLShapeId,
   TLStateNodeConstructor,
   toDomPrecision,
   useEditor,
@@ -15,6 +17,15 @@ export type DefaultNodeType = "page-node" | "blck-node";
 export type RoamNodeShape = {
   id: string;
   type: DefaultNodeType;
+  x: number;
+  y: number;
+  rotation: number;
+  index: string;
+  parentId: string;
+  typeName: "shape";
+  isLocked: boolean;
+  opacity: number;
+  meta: Record<string, unknown>;
   props: {
     w: number;
     h: number;
@@ -30,6 +41,7 @@ type SearchResult = {
 
 const createShapeId = (): string =>
   `shape:${window.roamAlphaAPI.util.generateUID()}`;
+const toShapeId = (id: string): TLShapeId => id as TLShapeId;
 
 const escapeRegex = (value: string): string =>
   value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -83,7 +95,8 @@ const NodePickerDialog = ({ shape }: { shape: RoamNodeShape }): JSX.Element => {
   const [results, setResults] = useState<SearchResult[]>([]);
   const [selectedUid, setSelectedUid] = useState<string>("");
 
-  const isEditing = editor.getEditingShapeId() === (shape.id as any);
+  const shapeId = toShapeId(shape.id);
+  const isEditing = editor.getEditingShapeId() === shapeId;
   const needsSelection = !shape.props.uid;
 
   useEffect(() => {
@@ -124,7 +137,7 @@ const NodePickerDialog = ({ shape }: { shape: RoamNodeShape }): JSX.Element => {
     setSelectedUid("");
     editor.setEditingShape(null);
     if (!shape.props.uid) {
-      editor.deleteShapes([shape.id as any]);
+      editor.deleteShapes([shapeId]);
     }
     editor.setCurrentTool("select");
   };
@@ -132,8 +145,8 @@ const NodePickerDialog = ({ shape }: { shape: RoamNodeShape }): JSX.Element => {
   const applySelection = ({ uid, title }: SearchResult): void => {
     editor.updateShapes([
       {
-        id: shape.id as any,
-        type: shape.type as any,
+        id: shapeId,
+        type: shape.type as unknown as TLShape["type"],
         props: {
           ...shape.props,
           uid,
@@ -227,7 +240,7 @@ class BaseRoamNodeShapeUtil extends BaseBoxShapeUtil<any> {
   override canEdit = () => true;
   override canResize = () => true;
   override onDoubleClick(shape: RoamNodeShape): void {
-    this.editor.setEditingShape(shape.id as any);
+    this.editor.setEditingShape(toShapeId(shape.id));
   }
 
   override getDefaultProps(): RoamNodeShape["props"] {
@@ -240,7 +253,7 @@ class BaseRoamNodeShapeUtil extends BaseBoxShapeUtil<any> {
   }
 
   override indicator(shape: RoamNodeShape): JSX.Element {
-    const { bounds } = this.editor.getShapeGeometry(shape);
+    const { bounds } = this.editor.getShapeGeometry(toShapeId(shape.id));
     return (
       <rect
         width={toDomPrecision(bounds.width)}
@@ -286,8 +299,8 @@ export const createDefaultNodeShapeTools = (): TLStateNodeConstructor[] =>
           const { currentPagePoint } = this.editor.inputs;
           const shapeId = createShapeId();
           this.editor.createShape({
-            id: shapeId,
-            type: this.shapeType as any,
+            id: toShapeId(shapeId),
+            type: this.shapeType as unknown as TLShape["type"],
             x: currentPagePoint.x,
             y: currentPagePoint.y,
             props: {
@@ -297,7 +310,7 @@ export const createDefaultNodeShapeTools = (): TLStateNodeConstructor[] =>
               h: 120,
             },
           });
-          this.editor.setEditingShape(shapeId as any);
+          this.editor.setEditingShape(toShapeId(shapeId));
           this.editor.setCurrentTool("select");
         };
       },

@@ -7,15 +7,30 @@ export const ROAM_TLDRAW_KEY = "roamjs-tldraw";
 
 type RoamTldrawState = {
   stateId: string;
-  tldraw: JsonValue;
+  tldraw: Parameters<typeof loadSnapshot>[1];
 };
 
-const getPageProps = (pageUid: string): Record<string, unknown> =>
-  getBlockProps(pageUid) as Record<string, unknown>;
+const parseRoamTldrawState = (
+  value: JsonValue | undefined,
+): RoamTldrawState | undefined => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return;
+  const stateId = value["stateId"];
+  const tldraw = value["tldraw"];
+  if (typeof stateId !== "string" || !tldraw || typeof tldraw !== "object") {
+    return;
+  }
+  return {
+    stateId,
+    tldraw: tldraw as Parameters<typeof loadSnapshot>[1],
+  };
+};
+
+const getPageProps = (pageUid: string): Record<string, JsonValue> =>
+  getBlockProps(pageUid);
 
 const getPersistedSnapshot = (pageUid: string): RoamTldrawState | null => {
   const props = getPageProps(pageUid);
-  const persisted = props[ROAM_TLDRAW_KEY] as RoamTldrawState | undefined;
+  const persisted = parseRoamTldrawState(props[ROAM_TLDRAW_KEY]);
   if (!persisted?.tldraw) return null;
   return persisted;
 };
@@ -82,7 +97,7 @@ export const useRoamStore = ({
           pageUid,
           state: {
             stateId,
-            tldraw: store.getStoreSnapshot() as unknown as JsonValue,
+            tldraw: store.getStoreSnapshot() as Parameters<typeof loadSnapshot>[1],
           },
         });
       }, THROTTLE_MS);
@@ -101,15 +116,15 @@ export const useRoamStore = ({
       (_before: unknown, after: Record<string, unknown> | null) => {
         const props = normalizeProps(
           ((after?.[":block/props"] || {}) as JsonValue),
-        ) as Record<string, unknown>;
-        const state = props[ROAM_TLDRAW_KEY] as RoamTldrawState | undefined;
+        ) as Record<string, JsonValue>;
+        const state = parseRoamTldrawState(props[ROAM_TLDRAW_KEY]);
         if (!state?.tldraw) return;
         if (localStateIds.current.has(state.stateId)) return;
 
         window.clearTimeout(deserializeTimeout.current);
         deserializeTimeout.current = window.setTimeout(() => {
           store.mergeRemoteChanges(() => {
-            loadSnapshot(store, state.tldraw as unknown as object);
+            loadSnapshot(store, state.tldraw);
           });
         }, THROTTLE_MS);
       },

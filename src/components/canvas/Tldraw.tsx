@@ -5,6 +5,8 @@ import getPageUidByPageTitle from "roamjs-components/queries/getPageUidByPageTit
 import {
   Box,
   Editor,
+  TLShape,
+  TLShapeId,
   TLPointerEventInfo,
   Tldraw,
   defaultHandleExternalTextContent,
@@ -29,6 +31,9 @@ import tldrawStyles from "./tldrawStyles";
 
 const createShapeId = (): string =>
   `shape:${window.roamAlphaAPI.util.generateUID()}`;
+const toShapeId = (id: string): TLShapeId => id as TLShapeId;
+const toShapeType = (type: string): TLShape["type"] =>
+  type as unknown as TLShape["type"];
 
 const TldrawCanvas = ({
   title,
@@ -75,12 +80,12 @@ const TldrawCanvas = ({
     const wrapper = tldrawEl.closest(".roam-article, .rm-sidebar-outline");
     if (tldrawEl.classList.contains("relative")) {
       // Going to fullscreen
-      if (wrapper) wrapper.classList.add("rjs-tldraw-maximized");
+      if (wrapper) wrapper.classList.add("dg-tldraw-maximized");
       tldrawEl.classList.add("absolute", "inset-0");
       tldrawEl.classList.remove("relative");
     } else {
       // Going back to normal
-      if (wrapper) wrapper.classList.remove("rjs-tldraw-maximized");
+      if (wrapper) wrapper.classList.remove("dg-tldraw-maximized");
       tldrawEl.classList.add("relative");
       tldrawEl.classList.remove("absolute", "inset-0");
     }
@@ -161,8 +166,8 @@ const TldrawCanvas = ({
             const point =
               content.point ?? editor.getViewportPageBounds().center;
             editor.createShape({
-              id: createShapeId(),
-              type: match.type as any,
+              id: toShapeId(createShapeId()),
+              type: toShapeType(match.type),
               x: point.x,
               y: point.y,
               props: {

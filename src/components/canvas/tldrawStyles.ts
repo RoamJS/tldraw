@@ -56,4 +56,9 @@ export default /* css */ `
   background-color: var(--color-muted-2);
   opacity: 1;
 }
+
+/* Roam's main container should be static when tldraw is maximized */
+.roam-main {
+  position: relative;
+}
 `;
