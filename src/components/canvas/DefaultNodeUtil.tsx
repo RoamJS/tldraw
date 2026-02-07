@@ -24,37 +24,72 @@ export type RoamNodeShape = TLBaseShape<DefaultNodeType, RoamNodeShapeProps>;
 export type SearchResult = {
   uid: string;
   title: string;
+  editTime: number;
 };
 
 const escapeRegex = (value: string): string =>
   value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
-export const searchPages = ({ query }: { query: string }): SearchResult[] => {
+export const searchPages = ({
+  query,
+}: {
+  query: string;
+}): SearchResult[] => {
   const pattern = escapeRegex(query.trim());
-  if (!pattern) return [];
-  const rows = window.roamAlphaAPI.q(
-    `[:find ?uid ?title
-      :where
-        [?e :node/title ?title]
-        [?e :block/uid ?uid]
-        [(re-pattern "(?i)${pattern}") ?re]
-        [(re-find ?re ?title)]]`,
-  ) as [string, string][];
-  return rows.map(([uid, title]) => ({ uid, title }));
+  const rows = (
+    pattern
+      ? window.roamAlphaAPI.q(
+          `[:find ?uid ?title ?time
+            :where
+              [?e :node/title ?title]
+              [?e :block/uid ?uid]
+              [(get-else $ ?e :edit/time 0) ?time]
+              [(re-pattern "(?i)${pattern}") ?re]
+              [(re-find ?re ?title)]]`,
+        )
+      : window.roamAlphaAPI.q(
+          `[:find ?uid ?title ?time
+            :where
+              [?e :node/title ?title]
+              [?e :block/uid ?uid]
+              [(get-else $ ?e :edit/time 0) ?time]]`,
+        )
+  ) as [string, string, number][];
+
+  return rows
+    .map(([uid, title, editTime]) => ({ uid, title, editTime: editTime || 0 }))
+    .sort((a, b) => b.editTime - a.editTime);
 };
 
-export const searchBlocks = ({ query }: { query: string }): SearchResult[] => {
+export const searchBlocks = ({
+  query,
+}: {
+  query: string;
+}): SearchResult[] => {
   const pattern = escapeRegex(query.trim());
-  if (!pattern) return [];
-  const rows = window.roamAlphaAPI.q(
-    `[:find ?uid ?text
-      :where
-        [?e :block/string ?text]
-        [?e :block/uid ?uid]
-        [(re-pattern "(?i)${pattern}") ?re]
-        [(re-find ?re ?text)]]`,
-  ) as [string, string][];
-  return rows.map(([uid, title]) => ({ uid, title }));
+  const rows = (
+    pattern
+      ? window.roamAlphaAPI.q(
+          `[:find ?uid ?text ?time
+            :where
+              [?e :block/string ?text]
+              [?e :block/uid ?uid]
+              [(get-else $ ?e :edit/time 0) ?time]
+              [(re-pattern "(?i)${pattern}") ?re]
+              [(re-find ?re ?text)]]`,
+        )
+      : window.roamAlphaAPI.q(
+          `[:find ?uid ?text ?time
+            :where
+              [?e :block/string ?text]
+              [?e :block/uid ?uid]
+              [(get-else $ ?e :edit/time 0) ?time]]`,
+        )
+  ) as [string, string, number][];
+
+  return rows
+    .map(([uid, title, editTime]) => ({ uid, title, editTime: editTime || 0 }))
+    .sort((a, b) => b.editTime - a.editTime);
 };
 
 const TYPE_STYLES: Record<DefaultNodeType, { bg: string; color: string }> = {

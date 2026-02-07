@@ -20,6 +20,7 @@ import {
   InputGroup,
   Menu,
   MenuItem,
+  Spinner,
 } from "@blueprintjs/core";
 import "tldraw/tldraw.css";
 import { useRoamStore } from "./useRoamStore";
@@ -50,6 +51,8 @@ type InspectorTarget = {
   h: number;
 };
 
+const INSPECTOR_DOM_RESULT_LIMIT = 50;
+
 const TldrawCanvas = ({
   title,
   extensionAPI,
@@ -66,6 +69,7 @@ const TldrawCanvas = ({
   const [query, setQuery] = useState<string>("");
   const [results, setResults] = useState<SearchResult[]>([]);
   const [selectedUid, setSelectedUid] = useState<string>("");
+  const [isLoadingResults, setIsLoadingResults] = useState<boolean>(false);
 
   const shapeUtils = useMemo(
     () => [...defaultShapeUtils, ...createDefaultNodeShapeUtils()],
@@ -126,6 +130,7 @@ const TldrawCanvas = ({
       setQuery("");
       setResults([]);
       setSelectedUid("");
+      setIsLoadingResults(false);
       return;
     }
     setQuery(inspectorTarget.title || "");
@@ -134,29 +139,35 @@ const TldrawCanvas = ({
 
   useEffect(() => {
     if (!inspectorTarget) return;
-    if (!query.trim()) {
-      setResults([]);
-      return;
-    }
+    setIsLoadingResults(true);
     const timeout = window.setTimeout(() => {
       const r =
         inspectorTarget.type === "page-node"
-          ? searchPages({ query }).slice(0, 30)
-          : searchBlocks({ query }).slice(0, 30);
+          ? searchPages({ query })
+          : searchBlocks({ query });
       setResults(r);
+      setIsLoadingResults(false);
     }, 120);
-    return () => window.clearTimeout(timeout);
+    return () => {
+      window.clearTimeout(timeout);
+      setIsLoadingResults(false);
+    };
   }, [inspectorTarget, query]);
 
+  const visibleResults = useMemo(
+    () => results.slice(0, INSPECTOR_DOM_RESULT_LIMIT),
+    [results],
+  );
+
   useEffect(() => {
-    if (!results.length) {
+    if (!visibleResults.length) {
       setSelectedUid("");
       return;
     }
-    if (!selectedUid || !results.some((r) => r.uid === selectedUid)) {
-      setSelectedUid(results[0].uid);
+    if (!selectedUid || !visibleResults.some((r) => r.uid === selectedUid)) {
+      setSelectedUid(visibleResults[0].uid);
     }
-  }, [results, selectedUid]);
+  }, [visibleResults, selectedUid]);
 
   useEffect(() => {
     if (!inspectorTarget) return;
@@ -190,18 +201,19 @@ const TldrawCanvas = ({
     setInspectorTarget(null);
   };
 
-  const selectedResult = results.find((r) => r.uid === selectedUid) || null;
+  const selectedResult =
+    visibleResults.find((r) => r.uid === selectedUid) || null;
 
   const moveSelection = (delta: 1 | -1): void => {
-    if (!results.length) return;
-    const currentIndex = results.findIndex((r) => r.uid === selectedUid);
+    if (!visibleResults.length) return;
+    const currentIndex = visibleResults.findIndex((r) => r.uid === selectedUid);
     const nextIndex =
       currentIndex < 0
         ? delta === 1
           ? 0
-          : results.length - 1
-        : (currentIndex + delta + results.length) % results.length;
-    setSelectedUid(results[nextIndex].uid);
+          : visibleResults.length - 1
+        : (currentIndex + delta + visibleResults.length) % visibleResults.length;
+    setSelectedUid(visibleResults[nextIndex].uid);
   };
 
   const applyInspectorResult = (result: SearchResult): void => {
@@ -353,28 +365,37 @@ const TldrawCanvas = ({
       )}
       {inspectorTarget && (
         <div
-          className="roamjs-node-inspector absolute left-0 top-11 z-20 flex max-h-[calc(100%-2.75rem)] w-96 flex-col rounded-r-md border border-gray-200 bg-white shadow-sm"
+          className="roamjs-node-inspector pointer-events-auto absolute bottom-10 left-1 z-20 flex w-80 flex-col rounded-lg bg-white"
           onPointerDown={(e) => e.stopPropagation()}
-          style={{ pointerEvents: "all" }}
+          style={{
+            top: "3.25rem",
+            height: "calc(100% - 50px)",
+            boxShadow:
+              "0px 0px 2px hsl(0, 0%, 0%, 16%), 0px 2px 3px hsl(0, 0%, 0%, 24%), 0px 2px 6px hsl(0, 0%, 0%, 0.1), inset 0px 0px 0px 1px hsl(0, 0%, 100%)",
+          }}
         >
-          <div className="flex min-h-0 flex-1 flex-col p-3">
-            <div className="mb-2 flex items-center justify-between gap-2">
-              <div className="text-sm font-semibold">
-                {inspectorTarget.type === "page-node"
-                  ? "Select Page"
-                  : "Select Block"}
-              </div>
-              <div className="flex items-center gap-2">
-                <Button small text="Cancel" onClick={cancelInspector} />
-                <Button
-                  small
-                  intent="primary"
-                  text="Apply"
-                  disabled={!selectedResult}
-                  onClick={applyInspector}
-                />
-              </div>
+          <div
+            className="flex max-h-10 flex-shrink-0 items-center rounded-t-lg bg-white px-3"
+            style={{ minHeight: "35px" }}
+          >
+            <h2 className="m-0 flex-1 pb-1 text-left text-sm font-semibold leading-tight">
+              {inspectorTarget.type === "page-node" ? "Select Page" : "Select Block"}
+            </h2>
+            <div className="flex flex-shrink-0 items-center gap-1">
+              <Button small text="Cancel" onClick={cancelInspector} />
+              <Button
+                small
+                intent="primary"
+                text="Apply"
+                disabled={!selectedResult}
+                onClick={applyInspector}
+              />
             </div>
+          </div>
+          <div
+            className="flex min-h-0 flex-1 flex-col overflow-hidden p-3"
+            style={{ borderTop: "1px solid hsl(0, 0%, 91%)" }}
+          >
             <InputGroup
               autoFocus
               inputRef={inspectorInputRef}
@@ -404,21 +425,27 @@ const TldrawCanvas = ({
               }}
             />
             <div className="mt-2 min-h-0 flex-1 overflow-auto">
-              <Menu>
-                {results.map((result) => (
-                  <MenuItem
-                    key={`${result.uid}-${result.title}`}
-                    text={result.title}
-                    active={selectedUid === result.uid}
-                    onClick={(e: React.MouseEvent<HTMLElement>) => {
-                      setSelectedUid(result.uid);
-                      if (e.detail === 2) {
-                        applyInspectorResult(result);
-                      }
-                    }}
-                  />
-                ))}
-              </Menu>
+              {isLoadingResults ? (
+                <div className="flex h-full min-h-20 items-center justify-center">
+                  <Spinner size={18} />
+                </div>
+              ) : (
+                <Menu>
+                  {visibleResults.map((result) => (
+                    <MenuItem
+                      key={`${result.uid}-${result.title}`}
+                      text={result.title}
+                      active={selectedUid === result.uid}
+                      onClick={(e: React.MouseEvent<HTMLElement>) => {
+                        setSelectedUid(result.uid);
+                        if (e.detail === 2) {
+                          applyInspectorResult(result);
+                        }
+                      }}
+                    />
+                  ))}
+                </Menu>
+              )}
             </div>
           </div>
         </div>
