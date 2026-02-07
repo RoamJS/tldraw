@@ -1,12 +1,25 @@
 import React from "react";
 import {
+  DefaultKeyboardShortcutsDialog,
+  DefaultKeyboardShortcutsDialogContent,
+  DefaultMainMenu,
   DefaultToolbar,
   DefaultToolbarContent,
+  EditSubmenu,
+  ExportFileContentSubMenu,
+  ExtrasGroup,
+  PreferencesGroup,
   TLUiAssetUrlOverrides,
   TLUiComponents,
   TLUiOverrides,
   TLUiTranslationKey,
+  TldrawUiMenuGroup,
   TldrawUiMenuItem,
+  TldrawUiMenuSubmenu,
+  ZoomTo100MenuItem,
+  ZoomToFitMenuItem,
+  ZoomToSelectionMenuItem,
+  useActions,
   useIsToolSelected,
   useTools,
 } from "tldraw";
@@ -78,6 +91,45 @@ export const createUiComponents = (): TLUiComponents => ({
         ))}
         <DefaultToolbarContent />
       </DefaultToolbar>
+    );
+  },
+  KeyboardShortcutsDialog: (props) => {
+    const tools = useTools();
+    const actions = useActions();
+    return (
+      <DefaultKeyboardShortcutsDialog {...props}>
+        {DEFAULT_NODE_TOOLS.map((tool) => (
+          <TldrawUiMenuItem key={tool.id} {...tools[tool.id]} />
+        ))}
+        <TldrawUiMenuItem {...actions["toggle-full-screen"]} />
+        <DefaultKeyboardShortcutsDialogContent />
+      </DefaultKeyboardShortcutsDialog>
+    );
+  },
+  MainMenu: () => {
+    const ViewMenu = () => {
+      const actions = useActions();
+      return (
+        <TldrawUiMenuSubmenu id="view" label="menu.view">
+          <TldrawUiMenuGroup id="view-actions">
+            <TldrawUiMenuItem {...actions["zoom-in"]} />
+            <TldrawUiMenuItem {...actions["zoom-out"]} />
+            <ZoomTo100MenuItem />
+            <ZoomToFitMenuItem />
+            <ZoomToSelectionMenuItem />
+            <TldrawUiMenuItem {...actions["toggle-full-screen"]} />
+          </TldrawUiMenuGroup>
+        </TldrawUiMenuSubmenu>
+      );
+    };
+    return (
+      <DefaultMainMenu>
+        <EditSubmenu />
+        <ViewMenu />
+        <ExportFileContentSubMenu />
+        <ExtrasGroup />
+        <PreferencesGroup />
+      </DefaultMainMenu>
     );
   },
 });

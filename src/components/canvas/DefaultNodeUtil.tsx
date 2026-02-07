@@ -102,9 +102,20 @@ export const searchBlocks = ({
   );
 };
 
-const TYPE_STYLES: Record<DefaultNodeType, { bg: string; color: string }> = {
-  "page-node": { bg: "#111827", color: "#f9fafb" },
-  "blck-node": { bg: "#334155", color: "#f8fafc" },
+const TYPE_STYLES: Record<
+  DefaultNodeType,
+  { bg: string; color: string; border: string }
+> = {
+  "page-node": {
+    bg: "#ffffff",
+    color: "#182026",
+    border: "1px solid rgba(92, 112, 128, 0.25)",
+  },
+  "blck-node": {
+    bg: "rgba(92,112,128,0.05)",
+    color: "#182026",
+    border: "1px solid rgba(92, 112, 128, 0.2)",
+  },
 };
 
 export const DEFAULT_NODE_TOOLS: {
@@ -174,6 +185,7 @@ class BaseRoamNodeShapeUtil extends BaseBoxShapeUtil<RoamNodeShape> {
         style={{
           backgroundColor: style.bg,
           color: style.color,
+          border: style.border,
         }}
       >
         <div
