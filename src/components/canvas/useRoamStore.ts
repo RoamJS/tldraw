@@ -1,18 +1,17 @@
 import { TLAnyShapeUtilConstructor, createTLStore, loadSnapshot } from "tldraw";
 import { useEffect, useMemo, useRef } from "react";
+import getBlockProps, { JsonValue, normalizeProps } from "~/utils/getBlockProps";
 
 const THROTTLE_MS = 350;
 export const ROAM_TLDRAW_KEY = "roamjs-tldraw";
 
 type RoamTldrawState = {
   stateId: string;
-  tldraw: any;
+  tldraw: JsonValue;
 };
 
 const getPageProps = (pageUid: string): Record<string, unknown> =>
-  (window.roamAlphaAPI.pull("[:block/props]", [":block/uid", pageUid])?.[
-    ":block/props"
-  ] as Record<string, unknown> | undefined) || {};
+  getBlockProps(pageUid) as Record<string, unknown>;
 
 const getPersistedSnapshot = (pageUid: string): RoamTldrawState | null => {
   const props = getPageProps(pageUid);
@@ -56,6 +55,8 @@ export const useRoamStore = ({
       shapeUtils: customShapeUtils,
     });
 
+    if (!pageUid) return tlStore;
+
     const persisted = getPersistedSnapshot(pageUid);
     if (persisted?.tldraw) {
       loadSnapshot(tlStore, persisted.tldraw);
@@ -64,8 +65,9 @@ export const useRoamStore = ({
   }, [customShapeUtils, pageUid]);
 
   useEffect(() => {
+    if (!pageUid) return;
     const dispose = store.listen((entry: { source: string }) => {
-      if (entry.source !== "user") return;
+      if (entry.source === "remote") return;
       window.clearTimeout(serializeTimeout.current);
       serializeTimeout.current = window.setTimeout(() => {
         const stateId = window.roamAlphaAPI.util.generateUID();
@@ -78,7 +80,10 @@ export const useRoamStore = ({
         }
         setPersistedSnapshot({
           pageUid,
-          state: { stateId, tldraw: store.getStoreSnapshot() },
+          state: {
+            stateId,
+            tldraw: store.getStoreSnapshot() as unknown as JsonValue,
+          },
         });
       }, THROTTLE_MS);
     });
@@ -89,13 +94,14 @@ export const useRoamStore = ({
   }, [pageUid, store]);
 
   useEffect(() => {
+    if (!pageUid) return;
     const pullWatchProps = [
       "[:edit/user :block/props]",
       `[:block/uid "${pageUid}"]`,
       (_before: unknown, after: Record<string, unknown> | null) => {
-        const props =
-          (after?.[":block/props"] as Record<string, unknown> | undefined) ||
-          {};
+        const props = normalizeProps(
+          ((after?.[":block/props"] || {}) as JsonValue),
+        ) as Record<string, unknown>;
         const state = props[ROAM_TLDRAW_KEY] as RoamTldrawState | undefined;
         if (!state?.tldraw) return;
         if (localStateIds.current.has(state.stateId)) return;
@@ -103,7 +109,7 @@ export const useRoamStore = ({
         window.clearTimeout(deserializeTimeout.current);
         deserializeTimeout.current = window.setTimeout(() => {
           store.mergeRemoteChanges(() => {
-            loadSnapshot(store, state.tldraw);
+            loadSnapshot(store, state.tldraw as unknown as object);
           });
         }, THROTTLE_MS);
       },

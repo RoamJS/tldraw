@@ -1,4 +1,14 @@
-import { TLUiOverrides, TLUiTranslationKey } from "tldraw";
+import React from "react";
+import {
+  DefaultToolbar,
+  DefaultToolbarContent,
+  TLUiComponents,
+  TLUiOverrides,
+  TLUiTranslationKey,
+  TldrawUiMenuItem,
+  useIsToolSelected,
+  useTools,
+} from "tldraw";
 import { DEFAULT_NODE_TOOLS } from "./DefaultNodeUtil";
 
 export const CANVAS_MAXIMIZE_HOTKEY_KEY = "canvas-maximize-hotkey";
@@ -39,5 +49,23 @@ export const createUiOverrides = ({
       "tool.blck-node": "Block",
       "action.toggle-full-screen": "Toggle Full Screen",
     },
+  },
+});
+
+export const createUiComponents = (): TLUiComponents => ({
+  Toolbar: () => {
+    const tools = useTools();
+    return (
+      <DefaultToolbar>
+        {DEFAULT_NODE_TOOLS.map((tool) => (
+          <TldrawUiMenuItem
+            key={tool.id}
+            {...tools[tool.id]}
+            isSelected={useIsToolSelected(tools[tool.id])}
+          />
+        ))}
+        <DefaultToolbarContent />
+      </DefaultToolbar>
+    );
   },
 });

@@ -6,6 +6,7 @@ import {
   Box,
   Editor,
   Tldraw,
+  defaultHandleExternalTextContent,
   defaultShapeTools,
   defaultShapeUtils,
   defaultTools,
@@ -17,7 +18,11 @@ import {
   createDefaultNodeShapeUtils,
   getNodeTypeFromRoamRefText,
 } from "./DefaultNodeUtil";
-import { CANVAS_MAXIMIZE_HOTKEY_KEY, createUiOverrides } from "./uiOverrides";
+import {
+  CANVAS_MAXIMIZE_HOTKEY_KEY,
+  createUiComponents,
+  createUiOverrides,
+} from "./uiOverrides";
 import tldrawStyles from "./tldrawStyles";
 
 const createShapeId = (): string =>
@@ -30,7 +35,7 @@ const TldrawCanvas = ({
   title: string;
   extensionAPI: OnloadArgs["extensionAPI"];
 }) => {
-  const pageUid = getPageUidByPageTitle(title) || window.roamAlphaAPI.util.generateUID();
+  const pageUid = getPageUidByPageTitle(title);
   const appRef = useRef<Editor | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -45,7 +50,7 @@ const TldrawCanvas = ({
 
   const { store } = useRoamStore({
     customShapeUtils: shapeUtils,
-    pageUid,
+    pageUid: pageUid || "",
   });
 
   const updateViewportBounds = () => {
@@ -79,6 +84,9 @@ const TldrawCanvas = ({
     () => createUiOverrides({ toggleMaximized, maximizeKbd }),
     [maximizeKbd],
   );
+  const uiComponents = useMemo(() => createUiComponents(), []);
+
+  if (!pageUid) return null;
 
   return (
     <div
@@ -92,13 +100,20 @@ const TldrawCanvas = ({
         shapeUtils={shapeUtils}
         tools={tools}
         overrides={uiOverrides}
+        components={uiComponents}
         initialState="select"
         onMount={(editor) => {
           appRef.current = editor;
-          editor.registerExternalContentHandler("text", (content) => {
+          editor.registerExternalContentHandler("text", async (content) => {
             if (content.type !== "text") return;
             const match = getNodeTypeFromRoamRefText(content.text.trim());
-            if (!match) return;
+            if (!match) {
+              await defaultHandleExternalTextContent(editor, {
+                point: content.point,
+                text: content.text,
+              });
+              return;
+            }
             const point = content.point ?? editor.getViewportPageBounds().center;
             editor.createShape({
               id: createShapeId(),
