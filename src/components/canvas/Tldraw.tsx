@@ -65,6 +65,8 @@ const TldrawCanvas = ({
   const appRef = useRef<Editor | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const inspectorInputRef = useRef<HTMLInputElement | null>(null);
+  const searchRequestIdRef = useRef(0);
+  const lastSearchTargetIdRef = useRef<RoamNodeShape["id"] | null>(null);
   const [inspectorTarget, setInspectorTarget] =
     useState<InspectorTarget | null>(null);
   const [query, setQuery] = useState<string>("");
@@ -132,6 +134,7 @@ const TldrawCanvas = ({
       setResults([]);
       setSelectedUid("");
       setIsLoadingResults(false);
+      lastSearchTargetIdRef.current = null;
       return;
     }
     setQuery(inspectorTarget.title || "");
@@ -140,18 +143,46 @@ const TldrawCanvas = ({
 
   useEffect(() => {
     if (!inspectorTarget) return;
-    setIsLoadingResults(true);
+    const requestId = ++searchRequestIdRef.current;
+    let cancelled = false;
+    const isNewTarget = lastSearchTargetIdRef.current !== inspectorTarget.id;
+    lastSearchTargetIdRef.current = inspectorTarget.id;
+    if (isNewTarget) {
+      setIsLoadingResults(true);
+    }
     const timeout = window.setTimeout(() => {
-      const r =
+      if (!isNewTarget) {
+        setIsLoadingResults(true);
+      }
+      const promise =
         inspectorTarget.type === "page-node"
           ? searchPages({ query })
           : searchBlocks({ query });
-      setResults(r);
-      setIsLoadingResults(false);
+      void promise
+        .then((r) => {
+          if (
+            cancelled ||
+            requestId !== searchRequestIdRef.current
+          ) {
+            return;
+          }
+          setResults(r);
+          setIsLoadingResults(false);
+        })
+        .catch(() => {
+          if (
+            cancelled ||
+            requestId !== searchRequestIdRef.current
+          ) {
+            return;
+          }
+          setResults([]);
+          setIsLoadingResults(false);
+        });
     }, INSPECTOR_SEARCH_DEBOUNCE_MS);
     return () => {
+      cancelled = true;
       window.clearTimeout(timeout);
-      setIsLoadingResults(false);
     };
   }, [inspectorTarget?.id, inspectorTarget?.type, query]);
 

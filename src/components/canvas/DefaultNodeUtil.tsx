@@ -34,11 +34,11 @@ export const searchPages = ({
   query,
 }: {
   query: string;
-}): SearchResult[] => {
+}): Promise<SearchResult[]> => {
   const pattern = escapeRegex(query.trim());
-  const rows = (
+  return ((
     pattern
-      ? window.roamAlphaAPI.q(
+      ? window.roamAlphaAPI.data.async.q(
           `[:find ?uid ?title ?time
             :where
               [?e :node/title ?title]
@@ -47,29 +47,33 @@ export const searchPages = ({
               [(re-pattern "(?i)${pattern}") ?re]
               [(re-find ?re ?title)]]`,
         )
-      : window.roamAlphaAPI.q(
+      : window.roamAlphaAPI.data.async.q(
           `[:find ?uid ?title ?time
             :where
               [?e :node/title ?title]
               [?e :block/uid ?uid]
               [(get-else $ ?e :edit/time 0) ?time]]`,
         )
-  ) as [string, string, number][];
-
-  return rows
-    .map(([uid, title, editTime]) => ({ uid, title, editTime: editTime || 0 }))
-    .sort((a, b) => b.editTime - a.editTime);
+  ) as Promise<[string, string, number][]>).then((rows) =>
+    rows
+      .map(([uid, title, editTime]) => ({
+        uid,
+        title,
+        editTime: editTime || 0,
+      }))
+      .sort((a, b) => b.editTime - a.editTime),
+  );
 };
 
 export const searchBlocks = ({
   query,
 }: {
   query: string;
-}): SearchResult[] => {
+}): Promise<SearchResult[]> => {
   const pattern = escapeRegex(query.trim());
-  const rows = (
+  return ((
     pattern
-      ? window.roamAlphaAPI.q(
+      ? window.roamAlphaAPI.data.async.q(
           `[:find ?uid ?text ?time
             :where
               [?e :block/string ?text]
@@ -78,18 +82,22 @@ export const searchBlocks = ({
               [(re-pattern "(?i)${pattern}") ?re]
               [(re-find ?re ?text)]]`,
         )
-      : window.roamAlphaAPI.q(
+      : window.roamAlphaAPI.data.async.q(
           `[:find ?uid ?text ?time
             :where
               [?e :block/string ?text]
               [?e :block/uid ?uid]
               [(get-else $ ?e :edit/time 0) ?time]]`,
         )
-  ) as [string, string, number][];
-
-  return rows
-    .map(([uid, title, editTime]) => ({ uid, title, editTime: editTime || 0 }))
-    .sort((a, b) => b.editTime - a.editTime);
+  ) as Promise<[string, string, number][]>).then((rows) =>
+    rows
+      .map(([uid, title, editTime]) => ({
+        uid,
+        title,
+        editTime: editTime || 0,
+      }))
+      .sort((a, b) => b.editTime - a.editTime),
+  );
 };
 
 const TYPE_STYLES: Record<DefaultNodeType, { bg: string; color: string }> = {
