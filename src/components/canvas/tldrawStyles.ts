@@ -23,6 +23,15 @@ export default /* css */ `
   .roamjs-tldraw-canvas-container svg {
     overflow: visible;
   }
+
+  /* Prevent host CSS like [role=button]{cursor:pointer} from hijacking tldraw cursors */
+  .roamjs-tldraw-canvas-container .tl-canvas,
+  .roamjs-tldraw-canvas-container .tl-canvas [role="button"],
+  .roamjs-tldraw-canvas-container .tl-canvas [role="button"]:hover,
+  .roamjs-tldraw-canvas-container .tl-canvas [role="button"]:focus,
+  .roamjs-tldraw-canvas-container .tl-canvas [role="button"]:active {
+    cursor: var(--tl-cursor) !important;
+  }
   
   /* Roam's font-family is hijacking tldraw's */
   .tl-text-wrapper[data-font="draw"] div {
