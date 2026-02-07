@@ -1,6 +1,7 @@
 import React from "react";
 import { Button } from "@blueprintjs/core";
 import openBlockInSidebar from "roamjs-components/writes/openBlockInSidebar";
+import { BLOCK_REF_REGEX } from "roamjs-components/dom/constants";
 import {
   BaseBoxShapeUtil,
   HTMLContainer,
@@ -27,6 +28,38 @@ export type SearchResult = {
   uid: string;
   title: string;
   editTime: number;
+};
+
+const RoamRenderedString = ({ value }: { value: string }): JSX.Element => {
+  const contentRef = React.useRef<HTMLDivElement | null>(null);
+
+  React.useEffect(() => {
+    const el = contentRef.current;
+    if (!el) return;
+
+    if (!value) {
+      el.textContent = "";
+      return;
+    }
+
+    el.innerHTML = "";
+    void window.roamAlphaAPI.ui.components
+      .renderString({
+        el,
+        string: value,
+      })
+      .catch(() => {
+        // Fallback keeps node readable if Roam renderer errors.
+        el.textContent = value;
+      });
+  }, [value]);
+
+  return (
+    <div
+      ref={contentRef}
+      className="line-clamp-3 w-full overflow-hidden text-ellipsis"
+    />
+  );
 };
 
 const escapeRegex = (value: string): string =>
@@ -165,9 +198,10 @@ class BaseRoamNodeShapeUtil extends BaseBoxShapeUtil<RoamNodeShape> {
     const openInMainWindow = (): void => {
       if (!shape.props.uid) return;
       const isPage = Boolean(
-        window.roamAlphaAPI.pull("[:node/title]", [":block/uid", shape.props.uid])?.[
-          ":node/title"
-        ],
+        window.roamAlphaAPI.pull("[:node/title]", [
+          ":block/uid",
+          shape.props.uid,
+        ])?.[":node/title"],
       );
       if (isPage) {
         void window.roamAlphaAPI.ui.mainWindow.openPage({
@@ -181,7 +215,7 @@ class BaseRoamNodeShapeUtil extends BaseBoxShapeUtil<RoamNodeShape> {
     };
     return (
       <HTMLContainer
-        className="roamjs-tldraw-node pointer-events-auto group flex h-full w-full overflow-hidden rounded-2xl"
+        className="roamjs-tldraw-node group pointer-events-auto flex h-full w-full overflow-hidden rounded-2xl"
         style={{
           backgroundColor: style.bg,
           color: style.color,
@@ -230,8 +264,9 @@ class BaseRoamNodeShapeUtil extends BaseBoxShapeUtil<RoamNodeShape> {
               />
             </div>
           )}
+
           <div className="line-clamp-3 w-full overflow-hidden text-ellipsis">
-            {shape.props.title || emptyLabel}
+            <RoamRenderedString value={shape.props.title || emptyLabel} />
           </div>
         </div>
       </HTMLContainer>
@@ -287,7 +322,7 @@ export const createDefaultNodeShapeUtils = () => {
 export const getNodeTypeFromRoamRefText = (
   text: string,
 ): { type: DefaultNodeType; uid: string; title: string } | null => {
-  const pageMatch = text.match(/^\[\[(.+)\]\]$/);
+  const pageMatch = text.match(/^\[\[(.+?)\]\]$/);
   if (pageMatch?.[1]) {
     const title = pageMatch[1].trim();
     const result = window.roamAlphaAPI.q(
@@ -298,7 +333,7 @@ export const getNodeTypeFromRoamRefText = (
     return { type: "page-node", uid: pageUid, title };
   }
 
-  const blockMatch = text.match(/^\(\(([a-zA-Z0-9_-]{9})\)\)$/);
+  const blockMatch = text.match(BLOCK_REF_REGEX);
   if (blockMatch?.[1]) {
     const uid = blockMatch[1];
     const textOrPage =
