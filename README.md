@@ -1,37 +1,37 @@
-# RoamJS Extension Base
+# tldraw
 
-Stock base for [RoamJS](https://roamjs.com) Roam Research extensions. **Fork this repo** to start a new extension.
+<a href="https://roamjs.com/">
+    <img src="https://avatars.githubusercontent.com/u/138642184" alt="RoamJS Logo" title="RoamJS" align="right" height="60" />
+</a>
 
-## What's included
+**Turn any matching page into a fast, visual whiteboard with draggable page and block nodes, quick linking, and keyboard-friendly canvas controls.**
 
-- **roamjs-components** — shared utilities, DOM helpers, queries, writes, and UI components
-- **Samepage build** — `samepage build` produces the Roam Depot–ready bundle
-- **Settings panel** — example `extensionAPI.settings.panel.create` with an Enable switch
-- **TypeScript** — tsconfig extending `@samepage/scripts`
-- **CI** — GitHub Actions to build on push/PR (uses RoamJS secrets for publish)
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/RoamJS/tldraw)
+[![Status](https://img.shields.io/badge/status-beta-orange)](https://github.com/RoamJS/tldraw)
 
-## After forking
+## Notice! This is a beta extension.
 
-1. **Rename the repo** and update `package.json`:
-   - `name`: your extension slug (e.g. `my-extension`)
-   - `description`: one line describing the extension
+This extension is in active development and may contain bugs.
 
-2. **Implement in `src/index.ts`**:
-   - Keep or replace the settings panel
-   - Add your logic using `roamjs-components` (e.g. `createHTMLObserver`, `createBlock`, `renderToast`)
-   - Return `{ unload }` to clean up on unload
+If you notice anything off, or have feature requests, please reach out on GitHub or Slack.
 
-3. **Optional**: Add React components under `src/components/` (see [autocomplete](https://github.com/RoamJS/autocomplete), [giphy](https://github.com/RoamJS/giphy) for examples).
+## Features
 
-4. **Secrets (for publish)** — in the forked repo, configure:
-   - `ROAMJS_RELEASE_TOKEN`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`
-   - `AWS_REGION`, `ROAMJS_PROXY` (vars)
+- Auto load a canvas on pages that match your patterns (default: `Canvas/*`)
+- Works in both the main view and right sidebar
+- Adds dedicated Page and Block node tools to the tldraw toolbar
+- Supports paste and drag/drop of links and block refs directly onto the canvas
+- Includes a searchable inspector for picking target pages or blocks
+- Opens linked items in the main view (`Ctrl+click`) or sidebar (`Shift+click`)
+- Provides a configurable maximize hotkey for full-screen focus
 
-## Scripts
+## Quick Start
 
-- `npm start` — samepage dev (local development)
-- `npm run build:roam` — build for Roam (dry run; CI runs `npx samepage build`)
+The default canvas page pattern is `Canvas/*`.
 
-## License
+To create a canvas, create a page with a title like:
 
-MIT
+- `Canvas/Project Planning`
+- `Canvas/Ideas`
+
+When you open that page, the canvas loads automatically.

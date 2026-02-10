@@ -1,7 +1,7 @@
 {
-  "name": "extension-base",
-  "version": "1.0.0",
-  "description": "Stock RoamJS Roam Research Extension base — fork this repo to start new extensions.",
+  "name": "tldraw",
+  "version": "0.1.0",
+  "description": "Turn any matching page into a fast, visual whiteboard with draggable page and block nodes, quick linking, and keyboard-friendly canvas controls.",
   "main": "index.js",
   "scripts": {
     "dev": "tsx scripts/dev.ts",
@@ -13,7 +13,15 @@
   "keywords": [
     "roam",
     "roam-research",
-    "roamjs"
+    "roamjs",
+    "tldraw",
+    "whiteboard",
+    "canvas",
+    "visual",
+    "drag",
+    "link",
+    "page",
+    "block"
   ],
   "license": "MIT",
   "packageManager": "pnpm@9.15.0",
