@@ -18,14 +18,8 @@ import { CANVAS_MAXIMIZE_HOTKEY_KEY } from "~/components/canvas/uiOverrides";
 export default runExtension(async (onloadArgs) => {
   const { extensionAPI } = onloadArgs;
   extensionAPI.settings.panel.create({
-    tabTitle: "TLDraw",
+    tabTitle: "tldraw",
     settings: [
-      {
-        id: "enabled",
-        name: "Enable",
-        description: "Turn the extension on or off",
-        action: { type: "switch" },
-      },
       {
         id: CANVAS_PAGE_PATTERNS_KEY,
         name: "Canvas Page Patterns",
@@ -36,14 +30,11 @@ export default runExtension(async (onloadArgs) => {
       {
         id: CANVAS_MAXIMIZE_HOTKEY_KEY,
         name: "Maximize Hotkey",
-        description: "TLDraw keybinding syntax. Example: !3 for Alt+3",
+        description: "tldraw keybinding syntax. Example: !3 for Alt+3",
         action: { type: "input", placeholder: "!3" },
       },
     ],
   });
-
-  const enabled = extensionAPI.settings.get("enabled") as boolean | undefined;
-  if (enabled === false) return;
 
   const pageTitleObserver = createHTMLObserver({
     tag: "H1",
@@ -61,9 +52,7 @@ export default runExtension(async (onloadArgs) => {
   });
 
   return {
-    observers: [pageTitleObserver].filter(
-      (o): o is MutationObserver => !!o,
-    ),
+    observers: [pageTitleObserver].filter((o): o is MutationObserver => !!o),
     unload: () => {
       // TODO: Add migration/import from `roamjs-query-builder.tldraw` to `roamjs-tldraw`.
       // @ts-expect-error tldraw warns on multiple loads without resetting signia symbol.
