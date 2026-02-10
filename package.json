@@ -22,11 +22,7 @@
     "tldraw": "3.15.5"
   },
   "samepage": {
-    "extends": "node_modules/roamjs-components/package.json",
-    "external": [
-      "react-dom/client=window.ReactDOM",
-      "react=window.React;module.exports.useSyncExternalStore=window.React.useSyncExternalStore"
-    ]
+    "extends": "node_modules/roamjs-components/package.json"
   },
   "devDependencies": {
     "prettier": "^3.4.2",
