@@ -31,34 +31,24 @@ export type SearchResult = {
 };
 
 const RoamRenderedString = ({ value }: { value: string }): JSX.Element => {
-  const contentRef = React.useRef<HTMLDivElement | null>(null);
+  const roamUi = window.roamAlphaAPI.ui as {
+    react?: {
+      BlockString?: React.ComponentType<{ string: string }>;
+      String?: React.ComponentType<{ string: string }>;
+    };
+  };
+  const BlockString = roamUi.react?.BlockString || roamUi.react?.String;
 
-  React.useEffect(() => {
-    const el = contentRef.current;
-    if (!el) return;
-
-    if (!value) {
-      el.textContent = "";
-      return;
-    }
-
-    el.innerHTML = "";
-    void window.roamAlphaAPI.ui.components
-      .renderString({
-        el,
-        string: value,
-      })
-      .catch(() => {
-        // Fallback keeps node readable if Roam renderer errors.
-        el.textContent = value;
-      });
-  }, [value]);
+  if (BlockString) {
+    return React.createElement(BlockString, {
+      string: value || "",
+    });
+  }
 
   return (
-    <div
-      ref={contentRef}
-      className="line-clamp-3 w-full overflow-hidden text-ellipsis"
-    />
+    <span className="line-clamp-3 block w-full overflow-hidden text-ellipsis whitespace-pre-wrap break-words">
+      {value}
+    </span>
   );
 };
 
