@@ -336,8 +336,6 @@ const TldrawCanvas = ({
     };
   }, []);
 
-  if (!pageUid) return null;
-
   const cancelInspector = (): void => {
     const editor = appRef.current;
     if (!editor || !inspectorTarget) {
