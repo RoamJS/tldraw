@@ -30,6 +30,8 @@ export type SearchResult = {
   editTime: number;
 };
 
+const isNonBlankTitle = (value: string): boolean => value.trim().length > 0;
+
 const RoamRenderedString = ({ value }: { value: string }): JSX.Element => {
   const roamUi = window.roamAlphaAPI.ui as {
     react?: {
@@ -86,6 +88,7 @@ export const searchPages = ({
         title,
         editTime: editTime || 0,
       }))
+      .filter((result) => isNonBlankTitle(result.title))
       .sort((a, b) => b.editTime - a.editTime),
   );
 };
@@ -121,6 +124,7 @@ export const searchBlocks = ({
         title,
         editTime: editTime || 0,
       }))
+      .filter((result) => isNonBlankTitle(result.title))
       .sort((a, b) => b.editTime - a.editTime),
   );
 };

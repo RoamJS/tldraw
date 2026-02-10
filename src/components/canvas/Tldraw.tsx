@@ -527,7 +527,7 @@ const TldrawCanvas = ({
       )}
       {inspectorTarget && (
         <div
-          className={`bottom-10 left-1 roamjs-node-inspector pointer-events-auto absolute flex flex-col rounded-lg bg-white ${
+          className={`roamjs-node-inspector pointer-events-auto absolute bottom-10 left-1 flex flex-col rounded-lg bg-white ${
             isInspectorMaximized ? "right-1" : "w-80"
           }`}
           onPointerDown={(e) => e.stopPropagation()}
