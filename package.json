@@ -19,10 +19,13 @@
   "packageManager": "pnpm@9.15.0",
   "dependencies": {
     "roamjs-components": "0.86.4",
-    "tldraw": "3.15.5"
+    "tldraw": "3.15.1"
   },
   "samepage": {
-    "extends": "node_modules/roamjs-components/package.json"
+    "extends": "node_modules/roamjs-components/package.json",
+    "external": [
+      "react-dom/client=window.ReactDOM"
+    ]
   },
   "devDependencies": {
     "prettier": "^3.4.2",
