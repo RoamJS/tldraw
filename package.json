@@ -7,7 +7,7 @@
     "dev": "tsx scripts/dev.ts",
     "start": "samepage dev",
     "prebuild:roam": "pnpm install",
-    "build:roam": "samepage build --dry",
+    "build:roam": "tsx scripts/build.ts",
     "test": "samepage test"
   },
   "keywords": [
