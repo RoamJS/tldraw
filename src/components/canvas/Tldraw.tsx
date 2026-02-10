@@ -261,60 +261,6 @@ const TldrawCanvas = ({
     return () => document.removeEventListener("dragstart", handleDragStart);
   }, []);
 
-  if (!pageUid) return null;
-
-  const cancelInspector = (): void => {
-    const editor = appRef.current;
-    if (!editor || !inspectorTarget) {
-      setInspectorTarget(null);
-      return;
-    }
-    if (!inspectorTarget.uid) {
-      editor.deleteShapes([inspectorTarget.id]);
-    }
-    editor.selectNone();
-    setInspectorTarget(null);
-  };
-
-  const selectedResult =
-    visibleResults.find((r) => r.uid === selectedUid) || null;
-
-  const moveSelection = (delta: 1 | -1): void => {
-    if (!visibleResults.length) return;
-    const currentIndex = visibleResults.findIndex((r) => r.uid === selectedUid);
-    const nextIndex =
-      currentIndex < 0
-        ? delta === 1
-          ? 0
-          : visibleResults.length - 1
-        : (currentIndex + delta + visibleResults.length) %
-          visibleResults.length;
-    setSelectedUid(visibleResults[nextIndex].uid);
-  };
-
-  const applyInspectorResult = (result: SearchResult): void => {
-    const editor = appRef.current;
-    if (!editor || !inspectorTarget) return;
-    editor.updateShapes([
-      {
-        id: inspectorTarget.id,
-        type: inspectorTarget.type,
-        props: {
-          uid: result.uid,
-          title: result.title,
-          w: inspectorTarget.w,
-          h: inspectorTarget.h,
-        },
-      },
-    ]);
-    setInspectorTarget(null);
-  };
-
-  const applyInspector = (): void => {
-    if (!selectedResult) return;
-    applyInspectorResult(selectedResult);
-  };
-
   const handleDropPayload = ({
     dataTransfer,
     clientX,
@@ -389,6 +335,60 @@ const TldrawCanvas = ({
       container.removeEventListener("drop", onDropNative, true);
     };
   }, []);
+
+  if (!pageUid) return null;
+
+  const cancelInspector = (): void => {
+    const editor = appRef.current;
+    if (!editor || !inspectorTarget) {
+      setInspectorTarget(null);
+      return;
+    }
+    if (!inspectorTarget.uid) {
+      editor.deleteShapes([inspectorTarget.id]);
+    }
+    editor.selectNone();
+    setInspectorTarget(null);
+  };
+
+  const selectedResult =
+    visibleResults.find((r) => r.uid === selectedUid) || null;
+
+  const moveSelection = (delta: 1 | -1): void => {
+    if (!visibleResults.length) return;
+    const currentIndex = visibleResults.findIndex((r) => r.uid === selectedUid);
+    const nextIndex =
+      currentIndex < 0
+        ? delta === 1
+          ? 0
+          : visibleResults.length - 1
+        : (currentIndex + delta + visibleResults.length) %
+          visibleResults.length;
+    setSelectedUid(visibleResults[nextIndex].uid);
+  };
+
+  const applyInspectorResult = (result: SearchResult): void => {
+    const editor = appRef.current;
+    if (!editor || !inspectorTarget) return;
+    editor.updateShapes([
+      {
+        id: inspectorTarget.id,
+        type: inspectorTarget.type,
+        props: {
+          uid: result.uid,
+          title: result.title,
+          w: inspectorTarget.w,
+          h: inspectorTarget.h,
+        },
+      },
+    ]);
+    setInspectorTarget(null);
+  };
+
+  const applyInspector = (): void => {
+    if (!selectedResult) return;
+    applyInspectorResult(selectedResult);
+  };
 
   return (
     <div
