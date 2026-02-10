@@ -18,8 +18,6 @@ const getVersion = (): string => {
 const getBuildDate = (): string => {
   return new Date().toISOString().split("T")[0]; // YYYY-MM-DD format
 };
-let envContents = null;
-
 // https://github.com/evanw/esbuild/issues/337#issuecomment-954633403
 const importAsGlobals = (
   mapping: Record<string, string> = {},
