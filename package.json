@@ -4,18 +4,50 @@
   "description": "Stock RoamJS Roam Research Extension base — fork this repo to start new extensions.",
   "main": "index.js",
   "scripts": {
-    "postinstall": "patch-package",
+    "dev": "tsx scripts/dev.ts",
     "start": "samepage dev",
-    "prebuild:roam": "npm install",
+    "prebuild:roam": "pnpm install",
     "build:roam": "samepage build --dry",
     "test": "samepage test"
   },
-  "keywords": ["roam", "roam-research", "roamjs"],
+  "keywords": [
+    "roam",
+    "roam-research",
+    "roamjs"
+  ],
   "license": "MIT",
+  "packageManager": "pnpm@9.15.0",
   "dependencies": {
-    "roamjs-components": "^0.86.4"
+    "roamjs-components": "0.86.4",
+    "tldraw": "3.15.5"
   },
   "samepage": {
     "extends": "node_modules/roamjs-components/package.json"
+  },
+  "devDependencies": {
+    "prettier": "^3.4.2",
+    "prettier-plugin-tailwindcss": "^0.6.9",
+    "tailwindcss": "^3.4.0",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3",
+    "@types/react": "18.2.0",
+    "@types/react-dom": "18.2.0",
+    "esbuild": "^0.25.0",
+    "zod": "^3.23.8",
+    "dotenv": "^16.0.3"
+  },
+  "peerDependencies": {
+    "react": "18.2.0",
+    "react-dom": "18.2.0",
+    "@blueprintjs/core": "3.50.4"
+  },
+  "pnpm": {
+    "patchedDependencies": {
+      "@blueprintjs/core@3.50.4": "patches/@blueprintjs__core@3.50.4.patch"
+    },
+    "overrides": {
+      "@types/react": "18.2.0",
+      "@types/react-dom": "18.2.0"
+    }
   }
 }
