@@ -319,10 +319,8 @@ export const getNodeTypeFromRoamRefText = (
   const pageMatch = text.match(/^\[\[(.+?)\]\]$/);
   if (pageMatch?.[1]) {
     const title = pageMatch[1].trim();
-    const result = window.roamAlphaAPI.q(
-      `[:find ?uid . :where [?e :node/title "${title.replace(/"/g, '\\"')}"] [?e :block/uid ?uid]]`,
-    ) as unknown;
-    const pageUid = typeof result === "string" ? result : null;
+    const page = window.roamAlphaAPI.pull("[:block/uid]", [":node/title", title]);
+    const pageUid = (page?.[":block/uid"] as string | undefined) || null;
     if (!pageUid) return null;
     return { type: "page-node", uid: pageUid, title };
   }
