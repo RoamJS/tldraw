@@ -110,7 +110,7 @@ export const args = {
     "marked=window.RoamLazy.Marked",
     "marked-react=window.RoamLazy.MarkedReact",
     "nanoid=window.Nanoid;module.exports.nanoid=window.Nanoid",
-    "react=window.React;module.exports.useSyncExternalStore=(window.React&&window.React.useSyncExternalStore)||require(\"use-sync-external-store/shim\").useSyncExternalStore",
+    "react=window.React;module.exports.useSyncExternalStore=window.React&&window.React.useSyncExternalStore",
     "react/jsx-runtime=./node_modules/react/jsx-runtime.js",
     "react-dom=window.ReactDOM",
     "react-youtube=window.ReactYoutube",
