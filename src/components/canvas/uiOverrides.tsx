@@ -11,6 +11,7 @@ import {
   PreferencesGroup,
   TLUiAssetUrlOverrides,
   TLUiComponents,
+  TLUiToolItem,
   TLUiOverrides,
   TLUiTranslationKey,
   TldrawUiMenuGroup,
@@ -36,6 +37,11 @@ export const customAssetUrls: TLUiAssetUrlOverrides = {
     "page-node-icon": PAGE_NODE_ICON,
     "block-node-icon": BLOCK_NODE_ICON,
   },
+};
+
+const ToolMenuItem = ({ toolItem }: { toolItem: TLUiToolItem }): JSX.Element => {
+  const isSelected = useIsToolSelected(toolItem);
+  return <TldrawUiMenuItem {...toolItem} isSelected={isSelected} />;
 };
 
 export const createUiOverrides = ({
@@ -83,11 +89,7 @@ export const createUiComponents = (): TLUiComponents => ({
     return (
       <DefaultToolbar>
         {DEFAULT_NODE_TOOLS.map((tool) => (
-          <TldrawUiMenuItem
-            key={tool.id}
-            {...tools[tool.id]}
-            isSelected={useIsToolSelected(tools[tool.id])}
-          />
+          <ToolMenuItem key={tool.id} toolItem={tools[tool.id]} />
         ))}
         <DefaultToolbarContent />
       </DefaultToolbar>
