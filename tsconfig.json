@@ -1,11 +1,35 @@
 {
-  "extends": "./node_modules/@samepage/scripts/tsconfig",
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "include": [
+    "src",
+    "src/types.d.ts",
+    "tailwind.config.ts",
+    "tests",
+    "scripts"
+  ],
   "compilerOptions": {
+    "declaration": true,
+    "declarationMap": true,
+    "esModuleInterop": true,
+    "incremental": false,
+    "isolatedModules": true,
+    "lib": ["es2022", "DOM", "DOM.Iterable"],
+    "module": "nodenext",
+    "moduleDetection": "force",
+    "moduleResolution": "nodenext",
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "target": "ES2022",
+    "forceConsistentCasingInFileNames": true,
+    "allowSyntheticDefaultImports": true,
     "baseUrl": ".",
+    "outDir": "dist",
+    "allowJs": false,
+    "jsx": "react",
+    "noUncheckedIndexedAccess": false,
     "paths": {
       "~/*": ["./src/*"]
     }
-  },
-  "include": ["src", "scripts"],
-  "exclude": ["node_modules"]
+  }
 }

@@ -63,7 +63,7 @@ const RoamRenderedString = ({ value }: { value: string }): JSX.Element => {
 };
 
 const escapeRegex = (value: string): string =>
-  value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/"/g, '\\"');
 
 export const searchPages = ({
   query,
@@ -71,8 +71,8 @@ export const searchPages = ({
   query: string;
 }): Promise<SearchResult[]> => {
   const pattern = escapeRegex(query.trim());
-  return ((
-    pattern
+  return (
+    (pattern
       ? window.roamAlphaAPI.data.async.q(
           `[:find ?uid ?title ?time
             :where
@@ -88,8 +88,8 @@ export const searchPages = ({
               [?e :node/title ?title]
               [?e :block/uid ?uid]
               [(get-else $ ?e :edit/time 0) ?time]]`,
-        )
-  ) as Promise<[string, string, number][]>).then((rows) =>
+        )) as Promise<[string, string, number][]>
+  ).then((rows) =>
     rows
       .map(([uid, title, editTime]) => ({
         uid,
@@ -106,8 +106,8 @@ export const searchBlocks = ({
   query: string;
 }): Promise<SearchResult[]> => {
   const pattern = escapeRegex(query.trim());
-  return ((
-    pattern
+  return (
+    (pattern
       ? window.roamAlphaAPI.data.async.q(
           `[:find ?uid ?text ?time
             :where
@@ -123,8 +123,8 @@ export const searchBlocks = ({
               [?e :block/string ?text]
               [?e :block/uid ?uid]
               [(get-else $ ?e :edit/time 0) ?time]]`,
-        )
-  ) as Promise<[string, string, number][]>).then((rows) =>
+        )) as Promise<[string, string, number][]>
+  ).then((rows) =>
     rows
       .map(([uid, title, editTime]) => ({
         uid,
