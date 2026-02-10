@@ -335,11 +335,12 @@ export const getNodeTypeFromRoamRefText = (
         ":block/uid",
         uid,
       ]) || {};
+    const pageTitle = textOrPage[":node/title"] as string | undefined;
     const title =
-      (textOrPage[":node/title"] as string | undefined) ||
+      pageTitle ||
       (textOrPage[":block/string"] as string | undefined) ||
       uid;
-    return { type: "blck-node", uid, title };
+    return { type: pageTitle ? "page-node" : "blck-node", uid, title };
   }
 
   return null;
