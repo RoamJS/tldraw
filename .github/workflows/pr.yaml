@@ -18,7 +18,8 @@ jobs:
         with:
           node-version: "20"
           cache: "pnpm"
+          cache-dependency-path: pnpm-lock.yaml
       - name: install
         run: pnpm install --frozen-lockfile
       - name: build
-        run: pnpm samepage build
+        run: pnpm exec tsx scripts/build.ts

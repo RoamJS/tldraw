@@ -7,6 +7,7 @@ on:
       - "src/**"
       - "README.md"
       - "package.json"
+      - "pnpm-lock.yaml"
       - ".github/workflows/main.yaml"
 
 env:
@@ -28,7 +29,11 @@ jobs:
         with:
           node-version: "20"
           cache: "pnpm"
+          cache-dependency-path: pnpm-lock.yaml
       - name: install
         run: pnpm install --frozen-lockfile
       - name: build
-        run: pnpm samepage build
+        run: pnpm exec tsx scripts/build.ts
+      - name: publish to roam-depot
+        if: github.ref_name == 'main'
+        run: pnpm exec node -e "require('./node_modules/roamjs-components/scripts/publishToRoamDepot.js').default()"
