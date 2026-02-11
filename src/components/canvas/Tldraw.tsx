@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState, useRef } from "react";
 import { OnloadArgs } from "roamjs-components/types";
 import renderWithUnmount from "roamjs-components/util/renderWithUnmount";
+import renderToast from "roamjs-components/components/Toast";
 import getPageUidByPageTitle from "roamjs-components/queries/getPageUidByPageTitle";
 import getUids from "roamjs-components/dom/getUids";
 import {
@@ -662,8 +663,32 @@ const renderTldrawCanvasHelper = ({
   if (!childFromRoot?.parentElement) return () => {};
 
   const parentEl = childFromRoot.parentElement;
-  if (parentEl.querySelector(".roamjs-tldraw-canvas-container"))
-    return () => {};
+  const hasExistingCanvasByClass = !!parentEl.querySelector(
+    ".roamjs-tldraw-canvas-container",
+  );
+  // Query Builder uses this id for the canvas mount.
+  const hasExistingCanvasById = !!parentEl.querySelector(
+    "#roamjs-tldraw-canvas-container",
+  );
+  const hasExistingCanvas = hasExistingCanvasByClass || hasExistingCanvasById;
+  // Query Builder tags rm-block-children with this attribute when it owns the canvas mount.
+  const hasQueryBuilderCanvasOwner = childFromRoot.hasAttribute(
+    "data-roamjs-discourse-playground",
+  );
+  if (
+    hasQueryBuilderCanvasOwner &&
+    !parentEl.hasAttribute("data-roamjs-tldraw-qb-warning-shown")
+  ) {
+    parentEl.setAttribute("data-roamjs-tldraw-qb-warning-shown", "true");
+    renderToast({
+      id: "tldraw-query-builder-canvas-conflict",
+      intent: "warning",
+      content: `Multiple canvases have been detected on this page.  This may cause unexpected behavior.
+
+Either disable the tldraw extension or disable the Query Builder Discourse Graph flag.`,
+    });
+  }
+  if (hasExistingCanvas || hasQueryBuilderCanvasOwner) return () => {};
 
   const canvasWrapperEl = document.createElement("div");
   parentEl.appendChild(canvasWrapperEl);
