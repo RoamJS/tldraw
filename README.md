@@ -6,7 +6,7 @@
 
 **Turn any matching page into a fast, visual whiteboard with draggable page and block nodes, quick linking, and keyboard-friendly canvas controls.**
 
-[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/RoamJS/tldraw)
+[![RoamJS](https://roamjs.com/badges/website.svg)](https://roamjs.com/) [![DeepWiki](https://roamjs.com/badges/deepwiki.svg)](https://deepwiki.com/RoamJS/tldraw) [![Slack](https://roamjs.com/badges/slack.svg)](https://roamresearch.slack.com/archives/C016N2B66JU)
 [![Status](https://img.shields.io/badge/status-beta-orange)](https://github.com/RoamJS/tldraw)
 
 ## Notice! This is a beta extension.
